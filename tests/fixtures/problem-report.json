@@ -1,0 +1,96 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at_utc": "2026-07-26T12:10:06.0000000Z",
+  "collector": {
+    "name": "Windows Support Diagnostic Toolkit",
+    "version": "0.1.0",
+    "script_name": "Collect-Diagnostics.ps1",
+    "powershell_version": "5.1.26100.4652"
+  },
+  "collection_summary": {
+    "started_at_utc": "2026-07-26T12:10:00.0000000Z",
+    "completed_at_utc": "2026-07-26T12:10:06.0000000Z",
+    "duration_ms": 6000,
+    "status": "complete",
+    "sections": {
+      "system": "success",
+      "resources": "success",
+      "network": "success",
+      "services": "success",
+      "events": "success"
+    }
+  },
+  "system": {
+    "hostname": "LAB-PROBLEM-01",
+    "signed_in_username": "FICTIONAL\\jordan.patel",
+    "windows_edition": "Microsoft Windows 10 Pro",
+    "windows_version": "10.0.19045",
+    "windows_build": "19045",
+    "os_architecture": "64-bit",
+    "manufacturer": "Northwind Hardware",
+    "model": "OfficeStation 500",
+    "processor_name": "Intel(R) Core(TM) i5-8500 CPU @ 3.00GHz",
+    "logical_processor_count": 6,
+    "last_boot_time_utc": "2026-07-18T08:00:00.0000000Z",
+    "uptime_seconds": 706206
+  },
+  "resources": {
+    "memory": {
+      "observed_at_utc": "2026-07-26T12:10:01.0000000Z",
+      "total_gb": 8.0,
+      "available_gb": 0.64,
+      "used_gb": 7.36,
+      "percent_used": 92.0
+    },
+    "disks": [
+      {
+        "drive": "C:",
+        "total_gb": 100.0,
+        "free_gb": 8.0,
+        "percent_free": 8.0
+      }
+    ]
+  },
+  "network": {
+    "adapters": [
+      {
+        "name": "Ethernet",
+        "status": "Disconnected",
+        "ipv4_addresses": [],
+        "default_gateways": [],
+        "dns_servers": ["10.10.0.10"]
+      }
+    ]
+  },
+  "services": [
+    {"service_name": "EventLog", "display_name": "Windows Event Log", "availability": "available", "current_state": "Stopped", "startup_mode": "Automatic"},
+    {"service_name": "Winmgmt", "display_name": "Windows Management Instrumentation", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"},
+    {"service_name": "BFE", "display_name": "Base Filtering Engine", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"},
+    {"service_name": "Dhcp", "display_name": "DHCP Client", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"},
+    {"service_name": "Dnscache", "display_name": "DNS Client", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"},
+    {"service_name": "NlaSvc", "display_name": "Network Location Awareness", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"}
+  ],
+  "events": {
+    "lookback_hours": 24,
+    "maximum_events_per_log": 10,
+    "items": [
+      {
+        "log_name": "System",
+        "event_id": 41,
+        "provider_name": "Microsoft-Windows-Kernel-Power",
+        "level": "Critical",
+        "time_created_utc": "2026-07-26T07:12:30.0000000Z",
+        "message": "The fictional LAB-PROBLEM-01 system restarted without cleanly shutting down first."
+      },
+      {
+        "log_name": "Application",
+        "event_id": 1002,
+        "provider_name": "Application Hang",
+        "level": "Error",
+        "time_created_utc": "2026-07-26T06:48:10.0000000Z",
+        "message": "Fictional program C:\\Users\\jordan.patel\\AppData\\Local\\Northwind\\SupportApp.exe stopped interacting with Windows."
+      }
+    ]
+  },
+  "collection_errors": []
+}

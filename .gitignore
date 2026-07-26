@@ -1,0 +1,15 @@
+# Private local planning files
+.private/
+PLAN.md
+PROJECT_SPEC.md
+
+# Generated diagnostic reports and local runtime files
+reports/
+*.log
+*.db
+*.sqlite
+.env
+.venv/
+venv/
+__pycache__/
+.pytest_cache/

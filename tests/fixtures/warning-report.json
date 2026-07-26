@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at_utc": "2026-07-26T11:20:05.0000000Z",
+  "collector": {
+    "name": "Windows Support Diagnostic Toolkit",
+    "version": "0.1.0",
+    "script_name": "Collect-Diagnostics.ps1",
+    "powershell_version": "5.1.26100.4652"
+  },
+  "collection_summary": {
+    "started_at_utc": "2026-07-26T11:20:00.0000000Z",
+    "completed_at_utc": "2026-07-26T11:20:05.0000000Z",
+    "duration_ms": 5000,
+    "status": "complete",
+    "sections": {
+      "system": "success",
+      "resources": "success",
+      "network": "success",
+      "services": "success",
+      "events": "success"
+    }
+  },
+  "system": {
+    "hostname": "LAB-WARNING-01",
+    "signed_in_username": "FICTIONAL\\morgan.chen",
+    "windows_edition": "Microsoft Windows 11 Home",
+    "windows_version": "10.0.26100",
+    "windows_build": "26100",
+    "os_architecture": "64-bit",
+    "manufacturer": "Fabrikam Computing",
+    "model": "DeskPro S",
+    "processor_name": "AMD Ryzen 5 5600G with Radeon Graphics",
+    "logical_processor_count": 12,
+    "last_boot_time_utc": "2026-07-25T03:00:00.0000000Z",
+    "uptime_seconds": 116405
+  },
+  "resources": {
+    "memory": {
+      "observed_at_utc": "2026-07-26T11:20:01.0000000Z",
+      "total_gb": 8.0,
+      "available_gb": 1.2,
+      "used_gb": 6.8,
+      "percent_used": 85.0
+    },
+    "disks": [
+      {
+        "drive": "C:",
+        "total_gb": 120.0,
+        "free_gb": 15.0,
+        "percent_free": 12.5
+      }
+    ]
+  },
+  "network": {
+    "adapters": [
+      {
+        "name": "Wi-Fi",
+        "status": "Connected",
+        "ipv4_addresses": ["192.168.20.83"],
+        "default_gateways": ["192.168.20.1"],
+        "dns_servers": ["192.168.20.1"]
+      }
+    ]
+  },
+  "services": [
+    {"service_name": "EventLog", "display_name": "Windows Event Log", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"},
+    {"service_name": "Winmgmt", "display_name": "Windows Management Instrumentation", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"},
+    {"service_name": "BFE", "display_name": "Base Filtering Engine", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"},
+    {"service_name": "Dhcp", "display_name": "DHCP Client", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"},
+    {"service_name": "Dnscache", "display_name": "DNS Client", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"},
+    {"service_name": "NlaSvc", "display_name": "Network Location Awareness", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"}
+  ],
+  "events": {
+    "lookback_hours": 24,
+    "maximum_events_per_log": 10,
+    "items": [
+      {
+        "log_name": "Application",
+        "event_id": 1000,
+        "provider_name": "Application Error",
+        "level": "Error",
+        "time_created_utc": "2026-07-26T09:42:11.0000000Z",
+        "message": "Fictional application C:\\Program Files\\Fabrikam\\HelpDeskClient.exe stopped responding for user FICTIONAL\\morgan.chen."
+      }
+    ]
+  },
+  "collection_errors": []
+}

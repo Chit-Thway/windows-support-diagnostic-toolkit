@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at_utc": "2026-07-26T10:30:04.0000000Z",
+  "collector": {
+    "name": "Windows Support Diagnostic Toolkit",
+    "version": "0.1.0",
+    "script_name": "Collect-Diagnostics.ps1",
+    "powershell_version": "5.1.26100.4652"
+  },
+  "collection_summary": {
+    "started_at_utc": "2026-07-26T10:30:00.0000000Z",
+    "completed_at_utc": "2026-07-26T10:30:04.0000000Z",
+    "duration_ms": 4000,
+    "status": "complete",
+    "sections": {
+      "system": "success",
+      "resources": "success",
+      "network": "success",
+      "services": "success",
+      "events": "success"
+    }
+  },
+  "system": {
+    "hostname": "LAB-HEALTHY-01",
+    "signed_in_username": "FICTIONAL\\alex.taylor",
+    "windows_edition": "Microsoft Windows 11 Pro",
+    "windows_version": "10.0.26100",
+    "windows_build": "26100",
+    "os_architecture": "64-bit",
+    "manufacturer": "Contoso Devices",
+    "model": "SupportBook 14",
+    "processor_name": "Intel(R) Core(TM) i5-1135G7 @ 2.40GHz",
+    "logical_processor_count": 8,
+    "last_boot_time_utc": "2026-07-26T01:15:00.0000000Z",
+    "uptime_seconds": 33304
+  },
+  "resources": {
+    "memory": {
+      "observed_at_utc": "2026-07-26T10:30:01.0000000Z",
+      "total_gb": 16.0,
+      "available_gb": 8.8,
+      "used_gb": 7.2,
+      "percent_used": 45.0
+    },
+    "disks": [
+      {
+        "drive": "C:",
+        "total_gb": 476.94,
+        "free_gb": 190.78,
+        "percent_free": 40.0
+      }
+    ]
+  },
+  "network": {
+    "adapters": [
+      {
+        "name": "Ethernet",
+        "status": "Connected",
+        "ipv4_addresses": ["192.168.50.24"],
+        "default_gateways": ["192.168.50.1"],
+        "dns_servers": ["192.168.50.1", "1.1.1.1"]
+      }
+    ]
+  },
+  "services": [
+    {"service_name": "EventLog", "display_name": "Windows Event Log", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"},
+    {"service_name": "Winmgmt", "display_name": "Windows Management Instrumentation", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"},
+    {"service_name": "BFE", "display_name": "Base Filtering Engine", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"},
+    {"service_name": "Dhcp", "display_name": "DHCP Client", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"},
+    {"service_name": "Dnscache", "display_name": "DNS Client", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"},
+    {"service_name": "NlaSvc", "display_name": "Network Location Awareness", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"}
+  ],
+  "events": {
+    "lookback_hours": 24,
+    "maximum_events_per_log": 10,
+    "items": []
+  },
+  "collection_errors": []
+}

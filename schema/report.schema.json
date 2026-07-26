@@ -1,0 +1,495 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/windows-support-diagnostic-toolkit/report.schema.json",
+  "title": "Windows Support Diagnostic Toolkit Report",
+  "description": "Version 1.0.0 contract for a local Windows diagnostic report.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at_utc",
+    "collector",
+    "collection_summary",
+    "system",
+    "resources",
+    "network",
+    "services",
+    "events",
+    "collection_errors"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "generated_at_utc": {
+      "$ref": "#/$defs/dateTime"
+    },
+    "collector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version",
+        "script_name",
+        "powershell_version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "script_name": {
+          "const": "Collect-Diagnostics.ps1"
+        },
+        "powershell_version": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "collection_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "started_at_utc",
+        "completed_at_utc",
+        "duration_ms",
+        "status",
+        "sections"
+      ],
+      "properties": {
+        "started_at_utc": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "completed_at_utc": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "status": {
+          "enum": [
+            "complete",
+            "partial"
+          ]
+        },
+        "sections": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "system",
+            "resources",
+            "network",
+            "services",
+            "events"
+          ],
+          "properties": {
+            "system": {
+              "$ref": "#/$defs/sectionStatus"
+            },
+            "resources": {
+              "$ref": "#/$defs/sectionStatus"
+            },
+            "network": {
+              "$ref": "#/$defs/sectionStatus"
+            },
+            "services": {
+              "$ref": "#/$defs/sectionStatus"
+            },
+            "events": {
+              "$ref": "#/$defs/sectionStatus"
+            }
+          }
+        }
+      }
+    },
+    "system": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hostname",
+        "signed_in_username",
+        "windows_edition",
+        "windows_version",
+        "windows_build",
+        "os_architecture",
+        "manufacturer",
+        "model",
+        "processor_name",
+        "logical_processor_count",
+        "last_boot_time_utc",
+        "uptime_seconds"
+      ],
+      "properties": {
+        "hostname": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "signed_in_username": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "windows_edition": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "windows_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "windows_build": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "os_architecture": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "manufacturer": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "model": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "processor_name": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "logical_processor_count": {
+          "$ref": "#/$defs/nullableNonNegativeInteger"
+        },
+        "last_boot_time_utc": {
+          "$ref": "#/$defs/nullableDateTime"
+        },
+        "uptime_seconds": {
+          "$ref": "#/$defs/nullableNonNegativeInteger"
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "memory",
+        "disks"
+      ],
+      "properties": {
+        "memory": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "observed_at_utc",
+            "total_gb",
+            "available_gb",
+            "used_gb",
+            "percent_used"
+          ],
+          "properties": {
+            "observed_at_utc": {
+              "$ref": "#/$defs/dateTime"
+            },
+            "total_gb": {
+              "$ref": "#/$defs/nullableNonNegativeNumber"
+            },
+            "available_gb": {
+              "$ref": "#/$defs/nullableNonNegativeNumber"
+            },
+            "used_gb": {
+              "$ref": "#/$defs/nullableNonNegativeNumber"
+            },
+            "percent_used": {
+              "$ref": "#/$defs/nullablePercentage"
+            }
+          }
+        },
+        "disks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "drive",
+              "total_gb",
+              "free_gb",
+              "percent_free"
+            ],
+            "properties": {
+              "drive": {
+                "type": "string",
+                "pattern": "^[A-Za-z]:$"
+              },
+              "total_gb": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "free_gb": {
+                "type": "number",
+                "minimum": 0
+              },
+              "percent_free": {
+                "$ref": "#/$defs/percentage"
+              }
+            }
+          }
+        }
+      }
+    },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "adapters"
+      ],
+      "properties": {
+        "adapters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "status",
+              "ipv4_addresses",
+              "default_gateways",
+              "dns_servers"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ipv4_addresses": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "format": "ipv4"
+                }
+              },
+              "default_gateways": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "format": "ipv4"
+                }
+              },
+              "dns_servers": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "services": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "service_name",
+          "display_name",
+          "availability",
+          "current_state",
+          "startup_mode"
+        ],
+        "properties": {
+          "service_name": {
+            "enum": [
+              "EventLog",
+              "Winmgmt",
+              "BFE",
+              "Dhcp",
+              "Dnscache",
+              "NlaSvc"
+            ]
+          },
+          "display_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "availability": {
+            "enum": [
+              "available",
+              "unavailable"
+            ]
+          },
+          "current_state": {
+            "$ref": "#/$defs/nullableString"
+          },
+          "startup_mode": {
+            "$ref": "#/$defs/nullableString"
+          }
+        }
+      }
+    },
+    "events": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lookback_hours",
+        "maximum_events_per_log",
+        "items"
+      ],
+      "properties": {
+        "lookback_hours": {
+          "const": 24
+        },
+        "maximum_events_per_log": {
+          "const": 10
+        },
+        "items": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "log_name",
+              "event_id",
+              "provider_name",
+              "level",
+              "time_created_utc",
+              "message"
+            ],
+            "properties": {
+              "log_name": {
+                "enum": [
+                  "Application",
+                  "System"
+                ]
+              },
+              "event_id": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "provider_name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "level": {
+                "enum": [
+                  "Critical",
+                  "Error"
+                ]
+              },
+              "time_created_utc": {
+                "$ref": "#/$defs/dateTime"
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 500
+              }
+            }
+          }
+        }
+      }
+    },
+    "collection_errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "section",
+          "check",
+          "error_type",
+          "message",
+          "occurred_at_utc"
+        ],
+        "properties": {
+          "section": {
+            "enum": [
+              "system",
+              "resources",
+              "network",
+              "services",
+              "events"
+            ]
+          },
+          "check": {
+            "type": "string",
+            "minLength": 1
+          },
+          "error_type": {
+            "type": "string",
+            "minLength": 1
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          },
+          "occurred_at_utc": {
+            "$ref": "#/$defs/dateTime"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "dateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "nullableDateTime": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/dateTime"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "nullableString": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "nullableNonNegativeInteger": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "nullableNonNegativeNumber": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "percentage": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "nullablePercentage": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 100
+    },
+    "sectionStatus": {
+      "enum": [
+        "success",
+        "partial",
+        "failed"
+      ]
+    }
+  }
+}

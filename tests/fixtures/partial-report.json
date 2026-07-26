@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at_utc": "2026-07-26T13:05:04.0000000Z",
+  "collector": {
+    "name": "Windows Support Diagnostic Toolkit",
+    "version": "0.1.0",
+    "script_name": "Collect-Diagnostics.ps1",
+    "powershell_version": "5.1.26100.4652"
+  },
+  "collection_summary": {
+    "started_at_utc": "2026-07-26T13:05:00.0000000Z",
+    "completed_at_utc": "2026-07-26T13:05:04.0000000Z",
+    "duration_ms": 4000,
+    "status": "partial",
+    "sections": {
+      "system": "success",
+      "resources": "success",
+      "network": "failed",
+      "services": "success",
+      "events": "partial"
+    }
+  },
+  "system": {
+    "hostname": "LAB-PARTIAL-01",
+    "signed_in_username": "FICTIONAL\\casey.nguyen",
+    "windows_edition": "Microsoft Windows 11 Pro",
+    "windows_version": "10.0.26100",
+    "windows_build": "26100",
+    "os_architecture": "64-bit",
+    "manufacturer": "Adventure Works Devices",
+    "model": "FieldBook 13",
+    "processor_name": "Intel(R) Core(TM) i5-10210U CPU @ 1.60GHz",
+    "logical_processor_count": 8,
+    "last_boot_time_utc": "2026-07-26T04:00:00.0000000Z",
+    "uptime_seconds": 32704
+  },
+  "resources": {
+    "memory": {
+      "observed_at_utc": "2026-07-26T13:05:01.0000000Z",
+      "total_gb": 16.0,
+      "available_gb": 7.0,
+      "used_gb": 9.0,
+      "percent_used": 56.25
+    },
+    "disks": [
+      {
+        "drive": "C:",
+        "total_gb": 237.0,
+        "free_gb": 91.0,
+        "percent_free": 38.4
+      }
+    ]
+  },
+  "network": {
+    "adapters": []
+  },
+  "services": [
+    {"service_name": "EventLog", "display_name": "Windows Event Log", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"},
+    {"service_name": "Winmgmt", "display_name": "Windows Management Instrumentation", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"},
+    {"service_name": "BFE", "display_name": "Base Filtering Engine", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"},
+    {"service_name": "Dhcp", "display_name": "DHCP Client", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"},
+    {"service_name": "Dnscache", "display_name": "DNS Client", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"},
+    {"service_name": "NlaSvc", "display_name": "Network Location Awareness", "availability": "available", "current_state": "Running", "startup_mode": "Automatic"}
+  ],
+  "events": {
+    "lookback_hours": 24,
+    "maximum_events_per_log": 10,
+    "items": [
+      {
+        "log_name": "Application",
+        "event_id": 1000,
+        "provider_name": "Application Error",
+        "level": "Error",
+        "time_created_utc": "2026-07-26T11:00:00.0000000Z",
+        "message": "Fictional application error collected before the System log query was denied."
+      }
+    ]
+  },
+  "collection_errors": [
+    {
+      "section": "network",
+      "check": "IP-enabled network adapters",
+      "error_type": "CommandNotFoundException",
+      "message": "The fictional network query command was unavailable.",
+      "occurred_at_utc": "2026-07-26T13:05:02.0000000Z"
+    },
+    {
+      "section": "events",
+      "check": "System event log",
+      "error_type": "UnauthorizedAccessException",
+      "message": "Access to the fictional System event log was denied.",
+      "occurred_at_utc": "2026-07-26T13:05:03.0000000Z"
+    }
+  ]
+}
