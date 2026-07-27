@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>Windows Support Diagnostic Toolkit</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <script src="{{ url_for('static', filename='dashboard.js') }}" defer></script>
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to diagnostic results</a>
+
+    <header class="site-header">
+        <div class="shell header-layout">
+            <div>
+                <p class="eyebrow">Local diagnostic report</p>
+                <h1>Windows Support Dashboard</h1>
+                <p class="header-copy">
+                    A read-only view of deterministic support checks. Nothing on this
+                    page is uploaded or repaired automatically.
+                </p>
+            </div>
+            <dl class="report-meta" aria-label="Report metadata">
+                <div>
+                    <dt>Report generated</dt>
+                    <dd>
+                        <time class="js-local-time" datetime="{{ dashboard.generated_at_utc }}">
+                            {{ dashboard.generated_at_utc }}
+                        </time>
+                    </dd>
+                </div>
+                <div>
+                    <dt>Schema</dt>
+                    <dd>{{ dashboard.schema_version }}</dd>
+                </div>
+                <div>
+                    <dt>Source</dt>
+                    <dd>{{ selected_report_path.name }}</dd>
+                </div>
+            </dl>
+        </div>
+    </header>
+
+    <main id="main-content" class="shell page-stack">
+        <section class="status-hero status-panel status-{{ dashboard.overall_status_class }}"
+                 aria-labelledby="overall-heading">
+            <div>
+                <p class="eyebrow">Overall support status</p>
+                <h2 id="overall-heading">{{ dashboard.overall_status }}</h2>
+                <p>
+                    {% if dashboard.overall_status == "Problem" %}
+                        One or more high-confidence conditions need prompt investigation.
+                    {% elif dashboard.overall_status == "Warning" %}
+                        One or more observations deserve review before they become disruptive.
+                    {% elif dashboard.overall_status == "Unavailable" %}
+                        The available data is not sufficient for a complete assessment.
+                    {% else %}
+                        No warning or problem threshold was triggered by this report.
+                    {% endif %}
+                </p>
+            </div>
+            <div class="collection-state">
+                <span class="status-badge status-{{ dashboard.collection_status_class }}">
+                    Collection {{ dashboard.collection_status | title }}
+                </span>
+                <p>Collection completeness and support status are assessed separately.</p>
+            </div>
+        </section>
+
+        <section aria-labelledby="counts-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">At a glance</p>
+                    <h2 id="counts-heading">Check summary</h2>
+                </div>
+            </div>
+            <div class="status-counts">
+                {% for status in ["Healthy", "Warning", "Problem", "Unavailable"] %}
+                    <article class="count-card status-panel status-{{ status | lower }}">
+                        <span class="status-mark" aria-hidden="true"></span>
+                        <div>
+                            <p class="count-value">{{ dashboard.status_counts[status] }}</p>
+                            <h3>{{ status }}</h3>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section aria-labelledby="device-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Device overview</p>
+                    <h2 id="device-heading">{{ dashboard.system.hostname or "Unknown device" }}</h2>
+                </div>
+                <span class="status-badge status-{{ dashboard.system.status_class }}">
+                    {{ dashboard.system.status }}
+                </span>
+            </div>
+            <dl class="detail-grid panel">
+                <div><dt>Signed-in user</dt><dd>{{ dashboard.system.signed_in_username or "Unavailable" }}</dd></div>
+                <div><dt>Windows edition</dt><dd>{{ dashboard.system.windows_edition or "Unavailable" }}</dd></div>
+                <div><dt>Version / build</dt><dd>{{ dashboard.system.windows_version or "—" }} / {{ dashboard.system.windows_build or "—" }}</dd></div>
+                <div><dt>Architecture</dt><dd>{{ dashboard.system.os_architecture or "Unavailable" }}</dd></div>
+                <div><dt>Manufacturer</dt><dd>{{ dashboard.system.manufacturer or "Unavailable" }}</dd></div>
+                <div><dt>Model</dt><dd>{{ dashboard.system.model or "Unavailable" }}</dd></div>
+                <div class="detail-wide"><dt>Processor</dt><dd>{{ dashboard.system.processor_name or "Unavailable" }}</dd></div>
+                <div><dt>Logical processors</dt><dd>{{ dashboard.system.logical_processor_count if dashboard.system.logical_processor_count is not none else "Unavailable" }}</dd></div>
+                <div><dt>Uptime</dt><dd>{{ dashboard.system.uptime_seconds if dashboard.system.uptime_seconds is not none else "Unavailable" }} seconds</dd></div>
+            </dl>
+        </section>
+
+        <section aria-labelledby="resources-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Resource usage</p>
+                    <h2 id="resources-heading">Memory and storage</h2>
+                </div>
+            </div>
+
+            <div class="resource-layout">
+                <article class="panel metric-card status-panel status-{{ dashboard.memory.status_class }}">
+                    <div class="card-heading">
+                        <div>
+                            <p class="eyebrow">Memory snapshot</p>
+                            <h3>
+                                {% if dashboard.memory.percent_used is not none %}
+                                    {{ "%.2f" | format(dashboard.memory.percent_used) }}% used
+                                {% else %}
+                                    Usage unavailable
+                                {% endif %}
+                            </h3>
+                        </div>
+                        <span class="status-badge status-{{ dashboard.memory.status_class }}">
+                            {{ dashboard.memory.status }}
+                        </span>
+                    </div>
+                    {% if dashboard.memory.percent_used is not none %}
+                        <progress max="100" value="{{ dashboard.memory.percent_used }}">
+                            {{ dashboard.memory.percent_used }}%
+                        </progress>
+                    {% endif %}
+                    <dl class="metric-details">
+                        <div><dt>Total</dt><dd>{{ dashboard.memory.total_gb if dashboard.memory.total_gb is not none else "—" }} GB</dd></div>
+                        <div><dt>Used</dt><dd>{{ dashboard.memory.used_gb if dashboard.memory.used_gb is not none else "—" }} GB</dd></div>
+                        <div><dt>Available</dt><dd>{{ dashboard.memory.available_gb if dashboard.memory.available_gb is not none else "—" }} GB</dd></div>
+                    </dl>
+                    <p class="support-note">Memory is a point-in-time observation, not a trend.</p>
+                </article>
+
+                <div class="disk-list">
+                    {% for disk in dashboard.disks %}
+                        <article class="panel metric-card status-panel status-{{ disk.status_class }}">
+                            <div class="card-heading">
+                                <div>
+                                    <p class="eyebrow">Fixed disk</p>
+                                    <h3>{{ disk.drive }}</h3>
+                                </div>
+                                <span class="status-badge status-{{ disk.status_class }}">{{ disk.status }}</span>
+                            </div>
+                            {% if disk.percent_used is not none %}
+                                <progress max="100" value="{{ disk.percent_used }}">
+                                    {{ disk.percent_used }}% used
+                                </progress>
+                            {% endif %}
+                            <dl class="metric-details">
+                                <div><dt>Total</dt><dd>{{ disk.total_gb }} GB</dd></div>
+                                <div><dt>Free</dt><dd>{{ disk.free_gb }} GB</dd></div>
+                                <div><dt>Free</dt><dd>{{ disk.percent_free }}%</dd></div>
+                            </dl>
+                        </article>
+                    {% else %}
+                        <div class="panel empty-state">
+                            <h3>No disk records</h3>
+                            <p>The report did not contain fixed-disk observations.</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <section id="findings" aria-labelledby="findings-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Support triage</p>
+                    <h2 id="findings-heading">Checks and suggested actions</h2>
+                </div>
+            </div>
+            <div class="filter-bar" role="group" aria-label="Filter checks by status">
+                <button class="filter-button is-active" type="button" data-status-filter="all" aria-pressed="true">All</button>
+                {% for status in ["Problem", "Warning", "Unavailable", "Healthy"] %}
+                    <button class="filter-button" type="button" data-status-filter="{{ status }}" aria-pressed="false">
+                        {{ status }}
+                    </button>
+                {% endfor %}
+            </div>
+            <div class="finding-list" data-filter-list>
+                {% for check in dashboard.checks %}
+                    <article class="finding status-panel status-{{ check.status_class }}"
+                             data-check-status="{{ check.status }}">
+                        <div class="finding-heading">
+                            <div>
+                                <p class="eyebrow">{{ check.category }}</p>
+                                <h3>{{ check.title }}</h3>
+                            </div>
+                            <span class="status-badge status-{{ check.status_class }}">{{ check.status }}</span>
+                        </div>
+                        <dl class="finding-copy">
+                            <div><dt>Evidence</dt><dd>{{ check.evidence }}</dd></div>
+                            <div><dt>What it means</dt><dd>{{ check.explanation }}</dd></div>
+                            {% if check.next_action %}
+                                <div><dt>Suggested next action</dt><dd>{{ check.next_action }}</dd></div>
+                            {% endif %}
+                        </dl>
+                    </article>
+                {% endfor %}
+                <p class="panel empty-state js-filter-empty" hidden>No checks match this filter.</p>
+            </div>
+        </section>
+
+        <section aria-labelledby="network-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Network configuration</p>
+                    <h2 id="network-heading">Local adapters</h2>
+                </div>
+                <span class="status-badge status-{{ dashboard.network.status_class }}">{{ dashboard.network.status }}</span>
+            </div>
+            <div class="adapter-grid">
+                {% for adapter in dashboard.network.adapters %}
+                    <article class="panel">
+                        <div class="card-heading">
+                            <h3>{{ adapter.name }}</h3>
+                            <span class="status-badge status-{{ adapter.status_class }}">{{ adapter.status }}</span>
+                        </div>
+                        <dl class="stacked-details">
+                            <div>
+                                <dt>IPv4 addresses</dt>
+                                <dd>{{ adapter.ipv4_addresses | join(", ") if adapter.ipv4_addresses else "None reported" }}</dd>
+                            </div>
+                            <div>
+                                <dt>Default gateways</dt>
+                                <dd>{{ adapter.default_gateways | join(", ") if adapter.default_gateways else "None reported" }}</dd>
+                            </div>
+                            <div>
+                                <dt>DNS servers</dt>
+                                <dd>{{ adapter.dns_servers | join(", ") if adapter.dns_servers else "None reported" }}</dd>
+                            </div>
+                        </dl>
+                    </article>
+                {% else %}
+                    <div class="panel empty-state">
+                        <h3>No adapter records</h3>
+                        <p>Network information is unavailable or the report contains no IP-enabled adapters.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section aria-labelledby="services-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Selected services</p>
+                    <h2 id="services-heading">Windows service status</h2>
+                </div>
+            </div>
+            <div class="table-panel panel">
+                <table>
+                    <thead>
+                        <tr>
+                            <th scope="col">Service</th>
+                            <th scope="col">Current state</th>
+                            <th scope="col">Startup mode</th>
+                            <th scope="col">Assessment</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for service in dashboard.services %}
+                            <tr>
+                                <th scope="row">
+                                    {{ service.display_name }}
+                                    <span class="secondary-text">{{ service.service_name }}</span>
+                                </th>
+                                <td>{{ service.current_state or "Unavailable" }}</td>
+                                <td>{{ service.startup_mode or "Unavailable" }}</td>
+                                <td><span class="status-badge status-{{ service.status_class }}">{{ service.status }}</span></td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="4">No service records are available.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section aria-labelledby="events-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Previous {{ dashboard.events.lookback_hours or 24 }} hours</p>
+                    <h2 id="events-heading">Recent Critical and Error events</h2>
+                </div>
+                <span class="status-badge status-{{ dashboard.events.status_class }}">{{ dashboard.events.status }}</span>
+            </div>
+            <div class="event-list">
+                {% for event in dashboard.events["items"] %}
+                    <article class="panel event-card status-panel status-{{ event.status_class }}">
+                        <div class="event-heading">
+                            <div>
+                                <p class="eyebrow">{{ event.log_name }} log · Event {{ event.event_id }}</p>
+                                <h3>{{ event.provider_name }}</h3>
+                            </div>
+                            <span class="status-badge status-{{ event.status_class }}">{{ event.level }}</span>
+                        </div>
+                        <time class="js-local-time" datetime="{{ event.time_created_utc }}">{{ event.time_created_utc }}</time>
+                        <pre class="event-message">{{ event.message }}</pre>
+                    </article>
+                {% else %}
+                    <div class="panel empty-state">
+                        <h3>No matching recent events</h3>
+                        <p>The bounded query returned no Critical or Error events.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        {% if dashboard.collection_errors %}
+            <section aria-labelledby="errors-heading">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">Incomplete observations</p>
+                        <h2 id="errors-heading">Collection errors</h2>
+                    </div>
+                    <span class="status-badge status-unavailable">{{ dashboard.collection_errors | length }} unavailable</span>
+                </div>
+                <div class="error-list">
+                    {% for error in dashboard.collection_errors %}
+                        <article class="panel status-panel status-unavailable">
+                            <div class="card-heading">
+                                <div>
+                                    <p class="eyebrow">{{ error.section }}</p>
+                                    <h3>{{ error.check }}</h3>
+                                </div>
+                                <span class="status-badge status-unavailable">{{ error.error_type }}</span>
+                            </div>
+                            <p>{{ error.message }}</p>
+                            <time class="js-local-time secondary-text" datetime="{{ error.occurred_at_utc }}">{{ error.occurred_at_utc }}</time>
+                        </article>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+    </main>
+
+    <footer class="site-footer">
+        <div class="shell">
+            <p><strong>Local-only:</strong> this dashboard reads one report from disk and does not upload or repair anything.</p>
+        </div>
+    </footer>
+</body>
+</html>
