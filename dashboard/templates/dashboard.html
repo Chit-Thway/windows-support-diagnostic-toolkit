@@ -137,7 +137,9 @@
                         </span>
                     </div>
                     {% if dashboard.memory.percent_used is not none %}
-                        <progress max="100" value="{{ dashboard.memory.percent_used }}">
+                        <progress max="100"
+                                  value="{{ dashboard.memory.percent_used }}"
+                                  aria-label="Memory used">
                             {{ dashboard.memory.percent_used }}%
                         </progress>
                     {% endif %}
@@ -160,7 +162,9 @@
                                 <span class="status-badge status-{{ disk.status_class }}">{{ disk.status }}</span>
                             </div>
                             {% if disk.percent_used is not none %}
-                                <progress max="100" value="{{ disk.percent_used }}">
+                                <progress max="100"
+                                          value="{{ disk.percent_used }}"
+                                          aria-label="{{ disk.drive }} used space">
                                     {{ disk.percent_used }}% used
                                 </progress>
                             {% endif %}

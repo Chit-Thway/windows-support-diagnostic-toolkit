@@ -154,6 +154,7 @@ h3 {
 
 .page-stack {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 3.5rem;
     padding: 2rem 0 4rem;
 }
@@ -649,7 +650,10 @@ tbody tr:last-child td {
         padding: 2.5rem 0;
     }
 
-    .status-hero,
+    .status-hero {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
     .section-heading,
     .card-heading,
     .finding-heading,
@@ -659,6 +663,7 @@ tbody tr:last-child td {
     }
 
     .collection-state {
+        max-width: none;
         text-align: left;
     }
 

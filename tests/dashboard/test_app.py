@@ -33,6 +33,19 @@ def test_fixture_dashboard_pages(
     assert "default-src 'self'" in response.headers["Content-Security-Policy"]
 
 
+def test_resource_progress_indicators_have_accessible_names() -> None:
+    app = create_app(
+        report_path="tests/fixtures/problem-report.json",
+        test_config={"TESTING": True},
+    )
+
+    response = app.test_client().get("/")
+
+    assert response.status_code == 200
+    assert b'aria-label="Memory used"' in response.data
+    assert b'aria-label="C: used space"' in response.data
+
+
 def test_partial_report_displays_unavailable_data_and_errors() -> None:
     app = create_app(
         report_path="tests/fixtures/partial-report.json",
