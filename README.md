@@ -9,6 +9,24 @@ The toolkit runs entirely on the local computer. It does not upload reports,
 use telemetry, look up public IP addresses, or expose the dashboard beyond
 `127.0.0.1`.
 
+![Synthetic Problem report displayed in the local support dashboard](docs/screenshots/dashboard-overview.png)
+
+_Portfolio screenshot generated from fictional test data. It contains no real
+device, user, network, or event information._
+
+## Portfolio highlights
+
+- Demonstrates practical Windows troubleshooting across system, resource,
+  network, service, and Event Viewer data.
+- Separates read-only data collection, JSON contract validation, deterministic
+  evaluation, and presentation into clear components.
+- Converts technical evidence into concise explanations and safe manual next
+  actions without claiming an automated diagnosis.
+- Handles partial collection, unavailable data, malformed JSON, and unsupported
+  report versions without stopping the whole workflow.
+- Uses synthetic fixtures and automated boundary tests to protect real
+  machine-specific diagnostic information.
+
 ## What the toolkit shows
 
 - Windows, device, processor, and memory details
@@ -21,6 +39,27 @@ use telemetry, look up public IP addresses, or expose the dashboard beyond
 - Evidence, plain-English explanations, and safe suggested next actions
 
 The dashboard is a support aid, not an automated diagnosis or repair tool.
+
+## How it works
+
+```mermaid
+flowchart LR
+    A["PowerShell 5.1<br/>read-only collector"] --> B["Local JSON report<br/>schema 1.0.0"]
+    B --> C["Python loader<br/>and validator"]
+    C --> D["Deterministic<br/>support evaluator"]
+    D --> E["Flask dashboard<br/>127.0.0.1 only"]
+```
+
+Every step runs locally. The Flask process reads an existing report; it does
+not invoke PowerShell, modify the report, repair Windows, or make network
+requests.
+
+| Status | Meaning |
+| --- | --- |
+| Healthy | The limited check did not trigger a warning or problem rule. |
+| Warning | An observation deserves review or may affect reliability. |
+| Problem | A high-confidence rule found a condition likely to cause impact. |
+| Unavailable | The observation could not be collected or assessed reliably. |
 
 ## Requirements
 
@@ -175,3 +214,38 @@ reports/               Ignored local reports
 - The Flask development server is intended only for local use.
 - There is no report history, database, authentication, remote access,
   automatic repair, or multi-operating-system support.
+
+## Troubleshooting
+
+### `python` is not recognized
+
+Install a supported Python release from
+[python.org](https://www.python.org/downloads/windows/), enable the installer
+option to add Python to `PATH`, open a new PowerShell window, and confirm:
+
+```powershell
+python --version
+python -m pip --version
+```
+
+### Port 5000 is already in use
+
+Start the local dashboard on another loopback port:
+
+```powershell
+python -m dashboard --port 5050
+```
+
+Then open <http://127.0.0.1:5050>.
+
+### The report is missing or invalid
+
+Confirm the selected path exists and regenerate the report when necessary:
+
+```powershell
+Test-Path '.\reports\first-report.json'
+python -m dashboard --report '.\reports\first-report.json'
+```
+
+The dashboard supports contract version `1.0.0`. Missing, malformed, or
+incompatible reports show a local error page rather than a Python traceback.
