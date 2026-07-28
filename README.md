@@ -206,18 +206,35 @@ Additional local safeguards:
 - Responses disable caching, framing, referrer data, MIME sniffing, and
   unnecessary browser permissions.
 
+## Storage extension development
+
+The optional **Storage Insights and Guided Cleanup** extension is developed
+milestone by milestone on the `storage-extension` integration branch. Its
+public roadmap is in
+[`STORAGE_EXTENSION_PLAN.md`](STORAGE_EXTENSION_PLAN.md).
+
+Milestone 1 defines an independent storage-analysis contract, synthetic sample
+data, and accounting tests. It does not scan the local filesystem or provide
+cleanup actions. See
+[`docs/storage-report-contract.md`](docs/storage-report-contract.md) and
+[`sample_data/sample-storage-report.json`](sample_data/sample-storage-report.json).
+
+Real future scans will be written only to ignored `storage-reports/`.
+
 ## Project structure
 
 ```text
 collector/             Read-only PowerShell diagnostic collector
 dashboard/             Local Flask application, templates, and static files
-docs/                  Public report-contract documentation
-sample_data/           Trackable fictional sample report
-schema/                JSON Schema for report contract 1.0.0
+docs/                  Public diagnostic and storage-contract documentation
+sample_data/           Trackable fictional diagnostic and storage reports
+schema/                Independent diagnostic and storage JSON Schemas
 tests/dashboard/       Dashboard tests
 tests/fixtures/        Trackable fictional contract fixtures
+tests/storage/         Storage contract tests and fictional fixtures
 tests/*.ps1            Collector and contract tests
 reports/               Ignored local reports
+storage-reports/       Ignored local storage-analysis reports
 ```
 
 ## Current limitations

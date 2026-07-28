@@ -1,0 +1,252 @@
+{
+  "schema_version": "1.0.0",
+  "report_type": "storage_analysis",
+  "generated_at_utc": "2026-07-22T14:20:20Z",
+  "scanner": {
+    "name": "Storage Insights Scanner",
+    "version": "0.1.0",
+    "platform": "Windows",
+    "mode": "metadata_only"
+  },
+  "scan": {
+    "started_at_utc": "2026-07-22T14:20:00Z",
+    "completed_at_utc": "2026-07-22T14:20:20Z",
+    "duration_ms": 20000,
+    "status": "complete",
+    "detail_coverage": "bounded",
+    "aggregate_coverage": "estimated",
+    "files_examined": 1240,
+    "directories_examined": 165,
+    "bytes_examined": 210000000000,
+    "candidate_details_retained": 3,
+    "candidate_details_omitted": 2
+  },
+  "drive": {
+    "drive_letter": "C:",
+    "volume_label": "Fictional Low Space",
+    "filesystem": "NTFS",
+    "total_bytes": 500000000000,
+    "used_bytes": 480000000000,
+    "free_bytes": 20000000000,
+    "percent_free": 4,
+    "observed_at_utc": "2026-07-22T14:20:00Z"
+  },
+  "scan_scope": {
+    "roots": [
+      {
+        "requested_path": "C:\\Users\\fictional.morgan\\Downloads",
+        "canonical_path": "C:\\Users\\fictional.morgan\\Downloads",
+        "include_subdirectories": true,
+        "status": "complete",
+        "files_examined": 1240,
+        "directories_examined": 165,
+        "bytes_examined": 210000000000,
+        "errors_count": 0
+      }
+    ],
+    "options": {
+      "stale_after_days": 730,
+      "large_file_threshold_bytes": 1073741824,
+      "incomplete_min_age_hours": 24,
+      "temporary_min_age_hours": 168,
+      "maximum_candidates_retained": 3,
+      "use_last_access_as_classification_evidence": false
+    }
+  },
+  "accounting": {
+    "coverage": "estimated",
+    "categories": {
+      "free_space": {
+        "bytes": 20000000000,
+        "measurement": "exact",
+        "explanation": "Free bytes reported by the fictional drive summary."
+      },
+      "protected_system": {
+        "bytes": 120000000000,
+        "measurement": "estimated",
+        "explanation": "Estimated Windows and protected system storage."
+      },
+      "installed_applications": {
+        "bytes": 160000000000,
+        "measurement": "estimated",
+        "explanation": "Estimated installed application storage."
+      },
+      "user_content": {
+        "bytes": 140000000000,
+        "measurement": "estimated",
+        "explanation": "Estimated user-content storage."
+      },
+      "development_tools_and_caches": {
+        "bytes": 40000000000,
+        "measurement": "estimated",
+        "explanation": "Estimated development tools and supported cache locations."
+      },
+      "other_or_unreadable": {
+        "bytes": 20000000000,
+        "measurement": "estimated",
+        "explanation": "Storage not assigned to another non-overlapping category."
+      }
+    }
+  },
+  "candidate_summary": {
+    "accounting_method": "unique_candidate_id",
+    "total_unique_candidates": 5,
+    "total_unique_candidate_bytes": 28000000000,
+    "retained_candidates": 3,
+    "retained_unique_candidate_bytes": 23000000000,
+    "omitted_candidates": 2,
+    "attributes": {
+      "stale": {
+        "candidate_count": 2,
+        "unique_bytes": 19000000000
+      },
+      "likely_incomplete": {
+        "candidate_count": 1,
+        "unique_bytes": 8000000000
+      },
+      "large": {
+        "candidate_count": 3,
+        "unique_bytes": 27000000000
+      },
+      "empty": {
+        "candidate_count": 1,
+        "unique_bytes": 0
+      },
+      "temporary": {
+        "candidate_count": 1,
+        "unique_bytes": 1000000000
+      },
+      "development_cache": {
+        "candidate_count": 0,
+        "unique_bytes": 0
+      },
+      "protected": {
+        "candidate_count": 0,
+        "unique_bytes": 0
+      },
+      "unavailable": {
+        "candidate_count": 0,
+        "unique_bytes": 0
+      }
+    }
+  },
+  "candidates": [
+    {
+      "candidate_id": "low-space-001",
+      "path": "C:\\Users\\fictional.morgan\\Downloads\\old-lab-image.vhdx",
+      "scan_root": "C:\\Users\\fictional.morgan\\Downloads",
+      "name": "old-lab-image.vhdx",
+      "extension": ".vhdx",
+      "size_bytes": 15000000000,
+      "created_at_utc": "2021-09-01T03:00:00Z",
+      "modified_at_utc": "2021-09-01T04:00:00Z",
+      "last_accessed_at_utc": null,
+      "last_access_reliability": "unavailable",
+      "storage_category": "user_content",
+      "attributes": [
+        "stale",
+        "large"
+      ],
+      "evidence": [
+        {
+          "attribute": "stale",
+          "code": "modified_before_stale_cutoff",
+          "description": "The modification time is older than the configured two-year threshold.",
+          "observed_value": "2021-09-01T04:00:00Z"
+        },
+        {
+          "attribute": "large",
+          "code": "size_at_or_above_threshold",
+          "description": "The file is larger than the configured large-file threshold.",
+          "observed_value": 15000000000
+        }
+      ],
+      "confidence": "high",
+      "protection": {
+        "eligibility": "eligible",
+        "reason_code": null,
+        "explanation": "The fictional regular file is inside an approved scan root."
+      },
+      "is_regular_file": true,
+      "is_reparse_point": false
+    },
+    {
+      "candidate_id": "low-space-002",
+      "path": "C:\\Users\\fictional.morgan\\Downloads\\training-media.zip.part",
+      "scan_root": "C:\\Users\\fictional.morgan\\Downloads",
+      "name": "training-media.zip.part",
+      "extension": ".part",
+      "size_bytes": 8000000000,
+      "created_at_utc": "2025-11-02T09:00:00Z",
+      "modified_at_utc": "2025-11-02T09:30:00Z",
+      "last_accessed_at_utc": null,
+      "last_access_reliability": "unavailable",
+      "storage_category": "user_content",
+      "attributes": [
+        "likely_incomplete",
+        "large"
+      ],
+      "evidence": [
+        {
+          "attribute": "likely_incomplete",
+          "code": "allowlisted_partial_extension",
+          "description": "The allowlisted partial-download extension is old enough for review.",
+          "observed_value": ".part"
+        },
+        {
+          "attribute": "large",
+          "code": "size_at_or_above_threshold",
+          "description": "The file is larger than the configured large-file threshold.",
+          "observed_value": 8000000000
+        }
+      ],
+      "confidence": "high",
+      "protection": {
+        "eligibility": "eligible",
+        "reason_code": null,
+        "explanation": "The fictional regular file is inside an approved scan root."
+      },
+      "is_regular_file": true,
+      "is_reparse_point": false
+    },
+    {
+      "candidate_id": "low-space-003",
+      "path": "C:\\Users\\fictional.morgan\\Downloads\\empty-placeholder.txt",
+      "scan_root": "C:\\Users\\fictional.morgan\\Downloads",
+      "name": "empty-placeholder.txt",
+      "extension": ".txt",
+      "size_bytes": 0,
+      "created_at_utc": "2026-05-20T12:00:00Z",
+      "modified_at_utc": "2026-05-20T12:00:00Z",
+      "last_accessed_at_utc": null,
+      "last_access_reliability": "unavailable",
+      "storage_category": "user_content",
+      "attributes": [
+        "empty"
+      ],
+      "evidence": [
+        {
+          "attribute": "empty",
+          "code": "zero_byte_regular_file",
+          "description": "The regular file has a reported size of zero bytes.",
+          "observed_value": 0
+        }
+      ],
+      "confidence": "high",
+      "protection": {
+        "eligibility": "eligible",
+        "reason_code": null,
+        "explanation": "The fictional regular file is inside an approved scan root."
+      },
+      "is_regular_file": true,
+      "is_reparse_point": false
+    }
+  ],
+  "inaccessible_paths": [],
+  "scan_errors": [],
+  "limitations": [
+    "Two additional fictional candidate details were omitted because the configured report limit was reached.",
+    "Aggregate candidate counts and unique bytes include retained and omitted candidates.",
+    "Low free space does not make any individual candidate safe to remove."
+  ]
+}

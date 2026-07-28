@@ -1,0 +1,354 @@
+{
+  "schema_version": "1.0.0",
+  "report_type": "storage_analysis",
+  "generated_at_utc": "2026-07-21T09:15:12Z",
+  "scanner": {
+    "name": "Storage Insights Scanner",
+    "version": "0.1.0",
+    "platform": "Windows",
+    "mode": "metadata_only"
+  },
+  "scan": {
+    "started_at_utc": "2026-07-21T09:15:00Z",
+    "completed_at_utc": "2026-07-21T09:15:12Z",
+    "duration_ms": 12000,
+    "status": "complete",
+    "detail_coverage": "complete",
+    "aggregate_coverage": "estimated",
+    "files_examined": 620,
+    "directories_examined": 74,
+    "bytes_examined": 120000000000,
+    "candidate_details_retained": 5,
+    "candidate_details_omitted": 0
+  },
+  "drive": {
+    "drive_letter": "D:",
+    "volume_label": "Fictional Data",
+    "filesystem": "NTFS",
+    "total_bytes": 1000000000000,
+    "used_bytes": 800000000000,
+    "free_bytes": 200000000000,
+    "percent_free": 20,
+    "observed_at_utc": "2026-07-21T09:15:00Z"
+  },
+  "scan_scope": {
+    "roots": [
+      {
+        "requested_path": "D:\\FictionalUsers\\riley\\Downloads",
+        "canonical_path": "D:\\FictionalUsers\\riley\\Downloads",
+        "include_subdirectories": true,
+        "status": "complete",
+        "files_examined": 480,
+        "directories_examined": 51,
+        "bytes_examined": 95000000000,
+        "errors_count": 0
+      },
+      {
+        "requested_path": "D:\\FictionalUsers\\riley\\Development",
+        "canonical_path": "D:\\FictionalUsers\\riley\\Development",
+        "include_subdirectories": true,
+        "status": "complete",
+        "files_examined": 140,
+        "directories_examined": 23,
+        "bytes_examined": 25000000000,
+        "errors_count": 0
+      }
+    ],
+    "options": {
+      "stale_after_days": 730,
+      "large_file_threshold_bytes": 1073741824,
+      "incomplete_min_age_hours": 24,
+      "temporary_min_age_hours": 168,
+      "maximum_candidates_retained": 5000,
+      "use_last_access_as_classification_evidence": false
+    }
+  },
+  "accounting": {
+    "coverage": "estimated",
+    "categories": {
+      "free_space": {
+        "bytes": 200000000000,
+        "measurement": "exact",
+        "explanation": "Free bytes reported by the fictional drive summary."
+      },
+      "protected_system": {
+        "bytes": 250000000000,
+        "measurement": "estimated",
+        "explanation": "Estimated Windows and protected system storage."
+      },
+      "installed_applications": {
+        "bytes": 230000000000,
+        "measurement": "estimated",
+        "explanation": "Estimated installed application storage."
+      },
+      "user_content": {
+        "bytes": 220000000000,
+        "measurement": "estimated",
+        "explanation": "Estimated user-content storage."
+      },
+      "development_tools_and_caches": {
+        "bytes": 70000000000,
+        "measurement": "estimated",
+        "explanation": "Estimated development tools and supported cache locations."
+      },
+      "other_or_unreadable": {
+        "bytes": 30000000000,
+        "measurement": "estimated",
+        "explanation": "Storage not assigned to another non-overlapping category."
+      }
+    }
+  },
+  "candidate_summary": {
+    "accounting_method": "unique_candidate_id",
+    "total_unique_candidates": 5,
+    "total_unique_candidate_bytes": 19000000000,
+    "retained_candidates": 5,
+    "retained_unique_candidate_bytes": 19000000000,
+    "omitted_candidates": 0,
+    "attributes": {
+      "stale": {
+        "candidate_count": 3,
+        "unique_bytes": 7000000000
+      },
+      "likely_incomplete": {
+        "candidate_count": 2,
+        "unique_bytes": 4000000000
+      },
+      "large": {
+        "candidate_count": 3,
+        "unique_bytes": 18500000000
+      },
+      "empty": {
+        "candidate_count": 1,
+        "unique_bytes": 0
+      },
+      "temporary": {
+        "candidate_count": 1,
+        "unique_bytes": 500000000
+      },
+      "development_cache": {
+        "candidate_count": 1,
+        "unique_bytes": 2500000000
+      },
+      "protected": {
+        "candidate_count": 0,
+        "unique_bytes": 0
+      },
+      "unavailable": {
+        "candidate_count": 0,
+        "unique_bytes": 0
+      }
+    }
+  },
+  "candidates": [
+    {
+      "candidate_id": "candidate-001",
+      "path": "D:\\FictionalUsers\\riley\\Downloads\\video-course.iso.part",
+      "scan_root": "D:\\FictionalUsers\\riley\\Downloads",
+      "name": "video-course.iso.part",
+      "extension": ".part",
+      "size_bytes": 4000000000,
+      "created_at_utc": "2022-02-12T08:00:00Z",
+      "modified_at_utc": "2022-02-12T09:15:00Z",
+      "last_accessed_at_utc": null,
+      "last_access_reliability": "unavailable",
+      "storage_category": "user_content",
+      "attributes": [
+        "stale",
+        "likely_incomplete",
+        "large"
+      ],
+      "evidence": [
+        {
+          "attribute": "stale",
+          "code": "modified_before_stale_cutoff",
+          "description": "The modification time is older than the configured two-year threshold.",
+          "observed_value": "2022-02-12T09:15:00Z"
+        },
+        {
+          "attribute": "likely_incomplete",
+          "code": "allowlisted_partial_extension",
+          "description": "The allowlisted partial-download extension is old enough for review.",
+          "observed_value": ".part"
+        },
+        {
+          "attribute": "large",
+          "code": "size_at_or_above_threshold",
+          "description": "The file is larger than the configured large-file threshold.",
+          "observed_value": 4000000000
+        }
+      ],
+      "confidence": "high",
+      "protection": {
+        "eligibility": "eligible",
+        "reason_code": null,
+        "explanation": "The fictional regular file is inside an approved scan root."
+      },
+      "is_regular_file": true,
+      "is_reparse_point": false
+    },
+    {
+      "candidate_id": "candidate-002",
+      "path": "D:\\FictionalUsers\\riley\\Downloads\\archive-backup.zip",
+      "scan_root": "D:\\FictionalUsers\\riley\\Downloads",
+      "name": "archive-backup.zip",
+      "extension": ".zip",
+      "size_bytes": 12000000000,
+      "created_at_utc": "2026-01-10T07:00:00Z",
+      "modified_at_utc": "2026-01-10T07:30:00Z",
+      "last_accessed_at_utc": "2026-01-11T08:00:00Z",
+      "last_access_reliability": "limited",
+      "storage_category": "user_content",
+      "attributes": [
+        "large"
+      ],
+      "evidence": [
+        {
+          "attribute": "large",
+          "code": "size_at_or_above_threshold",
+          "description": "The file is larger than the configured large-file threshold.",
+          "observed_value": 12000000000
+        }
+      ],
+      "confidence": "high",
+      "protection": {
+        "eligibility": "eligible",
+        "reason_code": null,
+        "explanation": "The fictional regular file is inside an approved scan root."
+      },
+      "is_regular_file": true,
+      "is_reparse_point": false
+    },
+    {
+      "candidate_id": "candidate-003",
+      "path": "D:\\FictionalUsers\\riley\\Downloads\\setup-package.crdownload",
+      "scan_root": "D:\\FictionalUsers\\riley\\Downloads",
+      "name": "setup-package.crdownload",
+      "extension": ".crdownload",
+      "size_bytes": 0,
+      "created_at_utc": "2025-04-15T11:00:00Z",
+      "modified_at_utc": "2025-04-15T11:00:00Z",
+      "last_accessed_at_utc": null,
+      "last_access_reliability": "unavailable",
+      "storage_category": "user_content",
+      "attributes": [
+        "likely_incomplete",
+        "empty"
+      ],
+      "evidence": [
+        {
+          "attribute": "likely_incomplete",
+          "code": "allowlisted_partial_extension",
+          "description": "The allowlisted partial-download extension is old enough for review.",
+          "observed_value": ".crdownload"
+        },
+        {
+          "attribute": "empty",
+          "code": "zero_byte_regular_file",
+          "description": "The regular file has a reported size of zero bytes.",
+          "observed_value": 0
+        }
+      ],
+      "confidence": "high",
+      "protection": {
+        "eligibility": "eligible",
+        "reason_code": null,
+        "explanation": "The fictional regular file is inside an approved scan root."
+      },
+      "is_regular_file": true,
+      "is_reparse_point": false
+    },
+    {
+      "candidate_id": "candidate-004",
+      "path": "D:\\FictionalUsers\\riley\\Development\\pip-cache\\fictional-wheel-cache.bin",
+      "scan_root": "D:\\FictionalUsers\\riley\\Development",
+      "name": "fictional-wheel-cache.bin",
+      "extension": ".bin",
+      "size_bytes": 2500000000,
+      "created_at_utc": "2023-01-12T06:00:00Z",
+      "modified_at_utc": "2023-01-12T06:30:00Z",
+      "last_accessed_at_utc": "2023-01-12T06:30:00Z",
+      "last_access_reliability": "limited",
+      "storage_category": "development_tools_and_caches",
+      "attributes": [
+        "stale",
+        "large",
+        "development_cache"
+      ],
+      "evidence": [
+        {
+          "attribute": "stale",
+          "code": "modified_before_stale_cutoff",
+          "description": "The modification time is older than the configured two-year threshold.",
+          "observed_value": "2023-01-12T06:30:00Z"
+        },
+        {
+          "attribute": "large",
+          "code": "size_at_or_above_threshold",
+          "description": "The file is larger than the configured large-file threshold.",
+          "observed_value": 2500000000
+        },
+        {
+          "attribute": "development_cache",
+          "code": "supported_cache_location",
+          "description": "The fictional path represents a supported development-cache location.",
+          "observed_value": "pip-cache"
+        }
+      ],
+      "confidence": "medium",
+      "protection": {
+        "eligibility": "eligible",
+        "reason_code": null,
+        "explanation": "The fictional cache file is inside an approved scan root."
+      },
+      "is_regular_file": true,
+      "is_reparse_point": false
+    },
+    {
+      "candidate_id": "candidate-005",
+      "path": "D:\\FictionalUsers\\riley\\Downloads\\old-render.tmp",
+      "scan_root": "D:\\FictionalUsers\\riley\\Downloads",
+      "name": "old-render.tmp",
+      "extension": ".tmp",
+      "size_bytes": 500000000,
+      "created_at_utc": "2022-10-08T03:00:00Z",
+      "modified_at_utc": "2022-10-08T04:00:00Z",
+      "last_accessed_at_utc": null,
+      "last_access_reliability": "unavailable",
+      "storage_category": "user_content",
+      "attributes": [
+        "stale",
+        "temporary"
+      ],
+      "evidence": [
+        {
+          "attribute": "stale",
+          "code": "modified_before_stale_cutoff",
+          "description": "The modification time is older than the configured two-year threshold.",
+          "observed_value": "2022-10-08T04:00:00Z"
+        },
+        {
+          "attribute": "temporary",
+          "code": "allowlisted_temporary_extension",
+          "description": "The allowlisted temporary extension is older than the configured threshold.",
+          "observed_value": ".tmp"
+        }
+      ],
+      "confidence": "medium",
+      "protection": {
+        "eligibility": "eligible",
+        "reason_code": null,
+        "explanation": "The fictional regular file is inside an approved scan root."
+      },
+      "is_regular_file": true,
+      "is_reparse_point": false
+    }
+  ],
+  "inaccessible_paths": [],
+  "scan_errors": [],
+  "limitations": [
+    "Candidate attributes are review evidence and never mean that deletion is safe.",
+    "Last-access timestamps are informational and are not classification evidence.",
+    "A file with multiple attributes contributes to unique candidate bytes only once."
+  ]
+}
