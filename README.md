@@ -61,6 +61,10 @@ requests.
 | Problem | A high-confidence rule found a condition likely to cause impact. |
 | Unavailable | The observation could not be collected or assessed reliably. |
 
+Disk status is based on percentage free for each fixed disk: 20% or more is
+Healthy, below 20% is Warning, and below 5% is Problem. The dashboard still
+shows the actual total and free GB as supporting evidence.
+
 ## Requirements
 
 - Windows PowerShell 5.1 for collecting a report

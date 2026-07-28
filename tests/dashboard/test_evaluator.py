@@ -87,15 +87,15 @@ def test_memory_threshold_boundaries(
 @pytest.mark.parametrize(
     ("percent_free", "free_gb", "expected"),
     [
-        (15.0, 20.0, HEALTHY),
-        (14.99, 19.99, WARNING),
-        (9.0, 15.0, WARNING),
-        (12.0, 9.0, WARNING),
-        (9.99, 9.99, PROBLEM),
-        (5.0, 25.0, HEALTHY),
+        (20.0, 1.0, HEALTHY),
+        (19.99, 100.0, WARNING),
+        (9.46, 43.87, WARNING),
+        (5.0, 5.0, WARNING),
+        (4.99, 50.0, PROBLEM),
+        (0.0, 0.0, PROBLEM),
     ],
 )
-def test_combined_disk_thresholds(
+def test_disk_percentage_thresholds(
     percent_free: float, free_gb: float, expected: str
 ) -> None:
     disk, _ = _evaluate_disk(

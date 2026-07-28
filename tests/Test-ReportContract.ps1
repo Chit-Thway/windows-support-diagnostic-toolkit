@@ -379,15 +379,14 @@ Invoke-Test -Name 'malformed-report.json is rejected by the JSON parser' -Body {
 Invoke-Test -Name 'warning fixture uses the approved disk and memory bands' -Body {
     $warning = Read-JsonDocument -Path (Join-Path $fixturesDirectory 'warning-report.json')
     $disk = @($warning.resources.disks)[0]
-    Assert-True -Condition ($disk.percent_free -lt 15 -and $disk.free_gb -lt 20) -Message 'Warning disk does not meet both warning conditions.'
-    Assert-True -Condition (-not ($disk.percent_free -lt 10 -and $disk.free_gb -lt 10)) -Message 'Warning disk also meets the Problem conditions.'
+    Assert-True -Condition ($disk.percent_free -lt 20 -and $disk.percent_free -ge 5) -Message 'Warning disk is outside the approved percentage band.'
     Assert-True -Condition ($warning.resources.memory.percent_used -ge 80 -and $warning.resources.memory.percent_used -lt 90) -Message 'Warning memory is outside the approved band.'
 }
 
 Invoke-Test -Name 'problem fixture uses the approved disk and memory bands' -Body {
     $problem = Read-JsonDocument -Path (Join-Path $fixturesDirectory 'problem-report.json')
     $disk = @($problem.resources.disks)[0]
-    Assert-True -Condition ($disk.percent_free -lt 10 -and $disk.free_gb -lt 10) -Message 'Problem disk does not meet both Problem conditions.'
+    Assert-True -Condition ($disk.percent_free -lt 5) -Message 'Problem disk is not below the approved percentage threshold.'
     Assert-True -Condition ($problem.resources.memory.percent_used -ge 90) -Message 'Problem memory is below the approved threshold.'
     Assert-True -Condition (@($problem.events.items | Where-Object { $_.level -eq 'Critical' }).Count -gt 0) -Message 'Problem fixture has no Critical event.'
 }
