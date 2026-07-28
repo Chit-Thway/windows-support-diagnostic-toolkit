@@ -10,12 +10,14 @@ from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
+from jsonschema.exceptions import SchemaError
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REPORT_PATH = PROJECT_ROOT / "sample_data" / "sample-report.json"
 DEFAULT_SCHEMA_PATH = PROJECT_ROOT / "schema" / "report.schema.json"
 REPORT_PATH_ENVIRONMENT_VARIABLE = "DIAGNOSTIC_REPORT_PATH"
 SUPPORTED_SCHEMA_VERSION = "1.0.0"
+MAX_REPORT_BYTES = 5 * 1024 * 1024
 
 
 class ReportLoadError(Exception):
@@ -37,6 +39,11 @@ class ReportNotFoundError(ReportLoadError):
 class MalformedReportError(ReportLoadError):
     title = "Report is not valid JSON"
     status_code = 422
+
+
+class ReportTooLargeError(ReportLoadError):
+    title = "Report file is too large"
+    status_code = 413
 
 
 class UnsupportedSchemaVersionError(ReportLoadError):
@@ -82,7 +89,12 @@ def _load_schema(schema_path: str) -> dict[str, Any]:
             "The local JSON Schema could not be read. Recheck the project files."
         ) from error
 
-    Draft202012Validator.check_schema(schema)
+    try:
+        Draft202012Validator.check_schema(schema)
+    except SchemaError as error:
+        raise ReportValidationError(
+            "The local JSON Schema is invalid. Restore the project schema file."
+        ) from error
     return schema
 
 
@@ -106,15 +118,25 @@ def load_report(
         )
 
     try:
-        report = json.loads(path.read_text(encoding="utf-8"))
+        with path.open("rb") as report_file:
+            report_bytes = report_file.read(MAX_REPORT_BYTES + 1)
+    except OSError as error:
+        raise ReportLoadError(
+            "The report exists but could not be read. Check file permissions."
+        ) from error
+
+    if len(report_bytes) > MAX_REPORT_BYTES:
+        raise ReportTooLargeError(
+            "The selected report is larger than the supported 5 MiB limit. "
+            "Generate a new bounded report or choose a synthetic fixture."
+        )
+
+    try:
+        report = json.loads(report_bytes.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise MalformedReportError(
             "The selected file could not be parsed as UTF-8 JSON. "
             "Generate a new report or choose a valid fixture."
-        ) from error
-    except OSError as error:
-        raise ReportLoadError(
-            "The report exists but could not be read. Check file permissions."
         ) from error
 
     if not isinstance(report, dict):

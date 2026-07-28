@@ -12,6 +12,17 @@ LOOPBACK_HOST = "127.0.0.1"
 DEFAULT_PORT = 5000
 
 
+def loopback_port(value: str) -> int:
+    try:
+        port = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("port must be a whole number") from error
+
+    if not 1 <= port <= 65535:
+        raise argparse.ArgumentTypeError("port must be between 1 and 65535")
+    return port
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Display a local Windows diagnostic report."
@@ -25,7 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--port",
-        type=int,
+        type=loopback_port,
         default=DEFAULT_PORT,
         help=f"Loopback port to use (default: {DEFAULT_PORT}).",
     )

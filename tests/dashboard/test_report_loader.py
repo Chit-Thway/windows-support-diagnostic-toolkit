@@ -7,8 +7,10 @@ import pytest
 
 from dashboard.report_loader import (
     DEFAULT_REPORT_PATH,
+    MAX_REPORT_BYTES,
     MalformedReportError,
     ReportNotFoundError,
+    ReportTooLargeError,
     ReportValidationError,
     UnsupportedSchemaVersionError,
     load_report,
@@ -26,6 +28,32 @@ def test_valid_healthy_report_loads() -> None:
 def test_malformed_report_is_rejected() -> None:
     with pytest.raises(MalformedReportError):
         load_report("tests/fixtures/malformed-report.json")
+
+
+def test_non_utf8_report_is_rejected(tmp_path: Path) -> None:
+    path = tmp_path / "invalid-encoding.json"
+    path.write_bytes(b"\xff\xfe\x00\x01")
+
+    with pytest.raises(MalformedReportError):
+        load_report(path)
+
+
+def test_oversized_report_is_rejected_before_json_parsing(tmp_path: Path) -> None:
+    path = tmp_path / "oversized-report.json"
+    path.write_bytes(b"{" + (b" " * MAX_REPORT_BYTES))
+
+    with pytest.raises(ReportTooLargeError, match="5 MiB"):
+        load_report(path)
+
+
+def test_report_at_size_limit_is_allowed(fixture_data, tmp_path: Path) -> None:
+    path = tmp_path / "maximum-size-report.json"
+    report_bytes = json.dumps(fixture_data("healthy-report.json")).encode("utf-8")
+    path.write_bytes(report_bytes + (b" " * (MAX_REPORT_BYTES - len(report_bytes))))
+
+    report = load_report(path)
+
+    assert report["schema_version"] == "1.0.0"
 
 
 def test_missing_report_is_rejected(tmp_path: Path) -> None:
@@ -69,6 +97,14 @@ def test_non_object_json_is_rejected(tmp_path: Path) -> None:
 
     with pytest.raises(ReportValidationError):
         load_report(path)
+
+
+def test_invalid_local_schema_is_reported_gracefully(tmp_path: Path) -> None:
+    schema_path = tmp_path / "invalid-schema.json"
+    schema_path.write_text(json.dumps({"type": 123}), encoding="utf-8")
+
+    with pytest.raises(ReportValidationError, match="JSON Schema is invalid"):
+        load_report("tests/fixtures/healthy-report.json", schema_path=schema_path)
 
 
 def test_command_line_path_has_highest_precedence(tmp_path: Path) -> None:
