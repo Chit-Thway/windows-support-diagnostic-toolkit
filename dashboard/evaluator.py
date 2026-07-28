@@ -156,7 +156,7 @@ def _evaluate_disk(disk: dict[str, Any]) -> tuple[dict[str, Any], dict[str, str]
             "The disk cannot be assessed without both measurements.",
             "Generate a fresh report and review any resource collection errors.",
         )
-    elif percent_free < 10 and free_gb < 10:
+    elif percent_free < 5:
         status = PROBLEM
         check = _check(
             "Disk",
@@ -168,14 +168,15 @@ def _evaluate_disk(disk: dict[str, Any]) -> tuple[dict[str, Any], dict[str, str]
             "Open Windows Storage settings, review the largest categories, and remove "
             "or move only files you recognize. Do not delete Windows system files.",
         )
-    elif percent_free < 15 and free_gb < 20:
+    elif percent_free < 20:
         status = WARNING
         check = _check(
             "Disk",
             status,
             f"{drive} is running low on free space",
             f"{free_gb:.2f} GB free ({percent_free:.2f}%).",
-            "The drive meets both configured warning thresholds and may need attention.",
+            "The drive is below the configured 20% free-space warning threshold "
+            "and may need attention.",
             "Review Windows Storage settings and safely free space before it becomes "
             "critical.",
         )

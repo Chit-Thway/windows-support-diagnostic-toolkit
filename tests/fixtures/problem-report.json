@@ -46,8 +46,8 @@
       {
         "drive": "C:",
         "total_gb": 100.0,
-        "free_gb": 8.0,
-        "percent_free": 8.0
+        "free_gb": 4.0,
+        "percent_free": 4.0
       }
     ]
   },
