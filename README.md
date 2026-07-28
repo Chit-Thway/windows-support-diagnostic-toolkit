@@ -191,6 +191,17 @@ Reports are read locally and rendered with HTML escaping. The dashboard never
 uploads, modifies, or transmits report data. Flask binds only to
 `127.0.0.1`, so the dashboard is not intentionally available to other devices.
 
+Additional local safeguards:
+
+- Report reads are capped at 5 MiB before parsing. Normal bounded collector
+  reports are far smaller.
+- The report path is selected when the server starts; browser query parameters
+  and form submissions cannot replace or upload a report.
+- Invalid JSON, incompatible schemas, oversized reports, and unavailable files
+  produce friendly local error pages without tracebacks.
+- Responses disable caching, framing, referrer data, MIME sniffing, and
+  unnecessary browser permissions.
+
 ## Project structure
 
 ```text
@@ -208,6 +219,7 @@ reports/               Ignored local reports
 ## Current limitations
 
 - The dashboard supports report schema version `1.0.0` only.
+- Reports larger than 5 MiB are rejected.
 - One report path is selected when the server starts; switch reports by
   stopping and restarting the server.
 - Statuses use documented deterministic thresholds and are not AI diagnoses.
