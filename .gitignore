@@ -5,6 +5,8 @@ PROJECT_SPEC.md
 
 # Generated diagnostic reports and local runtime files
 reports/
+storage-reports/
+cleanup-records/
 *.log
 *.db
 *.sqlite
@@ -13,3 +15,5 @@ reports/
 venv/
 __pycache__/
 .pytest_cache/
+.coverage
+htmlcov/
