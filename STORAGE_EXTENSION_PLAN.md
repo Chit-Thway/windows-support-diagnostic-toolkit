@@ -15,8 +15,7 @@ is merged back into `storage-extension`. The extension will not merge into
 
 ### Milestone 1 — Storage report contract
 
-Status: Implemented and validated on `storage-extension-m1-contract`; awaiting
-review and merge into `storage-extension`.
+Status: Complete and merged into `storage-extension`.
 
 Define and test a versioned JSON format for drive summaries, scan results,
 candidate evidence, classification confidence, and partial-scan errors. Add
@@ -25,6 +24,10 @@ synthetic fixtures containing no real machine data.
 Planned branch: `storage-extension-m1-contract`
 
 ### Milestone 2 — Read-only storage scanner
+
+Status: Implemented and validated on
+`storage-extension-m2-read-only-scanner`; awaiting review and merge into
+`storage-extension`.
 
 Build a local metadata-only scanner with progress, cancellation, protected-path
 handling, and safe recovery from inaccessible or changing files. It will not
