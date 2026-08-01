@@ -1,1 +1,0 @@
-"""Storage extension contract tests."""

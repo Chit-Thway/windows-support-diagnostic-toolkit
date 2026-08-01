@@ -6,7 +6,12 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator
 
-from .conftest import FIXTURES_DIRECTORY, REPOSITORY_ROOT, read_json
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+FIXTURES_DIRECTORY = Path(__file__).resolve().parent / "fixtures"
+
+
+def read_json(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 VALID_FIXTURES = (
     "healthy-storage-report.json",

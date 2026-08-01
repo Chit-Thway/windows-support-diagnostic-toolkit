@@ -214,12 +214,19 @@ public roadmap is in
 [`STORAGE_EXTENSION_PLAN.md`](STORAGE_EXTENSION_PLAN.md).
 
 Milestone 1 defines an independent storage-analysis contract, synthetic sample
-data, and accounting tests. It does not scan the local filesystem or provide
-cleanup actions. See
+data, and accounting tests. Milestone 2 adds a separately invoked, read-only
+metadata scanner for folders selected by the user. It does not provide cleanup
+actions. See
 [`docs/storage-report-contract.md`](docs/storage-report-contract.md) and
-[`sample_data/sample-storage-report.json`](sample_data/sample-storage-report.json).
+[`storage/README.md`](storage/README.md).
 
-Real future scans will be written only to ignored `storage-reports/`.
+Real scans are written only to ignored `storage-reports/`.
+
+Run the scanner explicitly from PowerShell:
+
+```powershell
+python -m storage --root "$env:USERPROFILE\Downloads"
+```
 
 ## Project structure
 
@@ -229,6 +236,7 @@ dashboard/             Local Flask application, templates, and static files
 docs/                  Public diagnostic and storage-contract documentation
 sample_data/           Trackable fictional diagnostic and storage reports
 schema/                Independent diagnostic and storage JSON Schemas
+storage/               Read-only storage scanner, classifier, and safety rules
 tests/dashboard/       Dashboard tests
 tests/fixtures/        Trackable fictional contract fixtures
 tests/storage/         Storage contract tests and fictional fixtures
