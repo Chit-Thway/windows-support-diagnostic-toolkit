@@ -1,0 +1,140 @@
+{
+  "schema_version": "1.0.0",
+  "report_type": "storage_analysis",
+  "generated_at_utc": "2026-07-20T10:00:05Z",
+  "scanner": {
+    "name": "Storage Insights Scanner",
+    "version": "0.1.0",
+    "platform": "Windows",
+    "mode": "metadata_only"
+  },
+  "scan": {
+    "started_at_utc": "2026-07-20T10:00:00Z",
+    "completed_at_utc": "2026-07-20T10:00:05Z",
+    "duration_ms": 5000,
+    "status": "complete",
+    "detail_coverage": "complete",
+    "aggregate_coverage": "estimated",
+    "files_examined": 148,
+    "directories_examined": 18,
+    "bytes_examined": 30000000000,
+    "candidate_details_retained": 0,
+    "candidate_details_omitted": 0
+  },
+  "drive": {
+    "drive_letter": "C:",
+    "volume_label": "Fictional System",
+    "filesystem": "NTFS",
+    "total_bytes": 512000000000,
+    "used_bytes": 282000000000,
+    "free_bytes": 230000000000,
+    "percent_free": 44.92,
+    "observed_at_utc": "2026-07-20T10:00:00Z"
+  },
+  "scan_scope": {
+    "roots": [
+      {
+        "requested_path": "C:\\Users\\fictional.alex\\Downloads",
+        "canonical_path": "C:\\Users\\fictional.alex\\Downloads",
+        "include_subdirectories": true,
+        "status": "complete",
+        "files_examined": 148,
+        "directories_examined": 18,
+        "bytes_examined": 30000000000,
+        "errors_count": 0
+      }
+    ],
+    "options": {
+      "stale_after_days": 730,
+      "large_file_threshold_bytes": 1073741824,
+      "incomplete_min_age_hours": 24,
+      "temporary_min_age_hours": 168,
+      "maximum_candidates_retained": 5000,
+      "use_last_access_as_classification_evidence": false
+    }
+  },
+  "accounting": {
+    "coverage": "estimated",
+    "categories": {
+      "free_space": {
+        "bytes": 230000000000,
+        "measurement": "exact",
+        "explanation": "Free bytes reported by the fictional drive summary."
+      },
+      "protected_system": {
+        "bytes": 80000000000,
+        "measurement": "estimated",
+        "explanation": "Estimated Windows and protected system storage."
+      },
+      "installed_applications": {
+        "bytes": 90000000000,
+        "measurement": "estimated",
+        "explanation": "Estimated installed application storage."
+      },
+      "user_content": {
+        "bytes": 75000000000,
+        "measurement": "estimated",
+        "explanation": "Estimated user-content storage."
+      },
+      "development_tools_and_caches": {
+        "bytes": 20000000000,
+        "measurement": "estimated",
+        "explanation": "Estimated development tools and supported cache locations."
+      },
+      "other_or_unreadable": {
+        "bytes": 17000000000,
+        "measurement": "estimated",
+        "explanation": "Storage not assigned to another non-overlapping category."
+      }
+    }
+  },
+  "candidate_summary": {
+    "accounting_method": "unique_candidate_id",
+    "total_unique_candidates": 0,
+    "total_unique_candidate_bytes": 0,
+    "retained_candidates": 0,
+    "retained_unique_candidate_bytes": 0,
+    "omitted_candidates": 0,
+    "attributes": {
+      "stale": {
+        "candidate_count": 0,
+        "unique_bytes": 0
+      },
+      "likely_incomplete": {
+        "candidate_count": 0,
+        "unique_bytes": 0
+      },
+      "large": {
+        "candidate_count": 0,
+        "unique_bytes": 0
+      },
+      "empty": {
+        "candidate_count": 0,
+        "unique_bytes": 0
+      },
+      "temporary": {
+        "candidate_count": 0,
+        "unique_bytes": 0
+      },
+      "development_cache": {
+        "candidate_count": 0,
+        "unique_bytes": 0
+      },
+      "protected": {
+        "candidate_count": 0,
+        "unique_bytes": 0
+      },
+      "unavailable": {
+        "candidate_count": 0,
+        "unique_bytes": 0
+      }
+    }
+  },
+  "candidates": [],
+  "inaccessible_paths": [],
+  "scan_errors": [],
+  "limitations": [
+    "Modification time does not prove whether a file is useful.",
+    "Drive categories may be estimated even when the selected root scan completes."
+  ]
+}

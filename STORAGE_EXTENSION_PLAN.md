@@ -15,11 +15,14 @@ is merged back into `storage-extension`. The extension will not merge into
 
 ### Milestone 1 — Storage report contract
 
+Status: Implemented and validated on `storage-extension-m1-contract`; awaiting
+review and merge into `storage-extension`.
+
 Define and test a versioned JSON format for drive summaries, scan results,
 candidate evidence, classification confidence, and partial-scan errors. Add
 synthetic fixtures containing no real machine data.
 
-Planned branch: `storage-extension/m1-contract`
+Planned branch: `storage-extension-m1-contract`
 
 ### Milestone 2 — Read-only storage scanner
 
@@ -27,7 +30,7 @@ Build a local metadata-only scanner with progress, cancellation, protected-path
 handling, and safe recovery from inaccessible or changing files. It will not
 delete or modify anything.
 
-Planned branch: `storage-extension/m2-read-only-scanner`
+Planned branch: `storage-extension-m2-read-only-scanner`
 
 ### Milestone 3 — Per-drive dashboard
 
@@ -35,7 +38,7 @@ Make disk cards interactive and add an accessible per-drive page with capacity
 information, a non-overlapping storage chart, scan completeness, and cleanup
 candidate summaries.
 
-Planned branch: `storage-extension/m3-drive-dashboard`
+Planned branch: `storage-extension-m3-drive-dashboard`
 
 ### Milestone 4 — Candidate explorer
 
@@ -44,7 +47,7 @@ Add sortable file results, evidence and confidence labels, `Match all` and
 workflow. Read-only actions will include opening a containing folder and copying
 a path.
 
-Planned branch: `storage-extension/m4-candidate-explorer`
+Planned branch: `storage-extension-m4-candidate-explorer`
 
 ### Milestone 5 — Guided Recycle Bin cleanup
 
@@ -53,7 +56,7 @@ explicit confirmation, immediate file revalidation, protected-path enforcement,
 and per-file results. Files will move only to the Windows Recycle Bin; failure
 will never fall back to permanent deletion.
 
-Planned branch: `storage-extension/m5-guided-cleanup`
+Planned branch: `storage-extension-m5-guided-cleanup`
 
 ### Milestone 6 — Development-storage insights
 
@@ -61,7 +64,7 @@ Explain storage used by supported Python environments, pip caches, and selected
 Java locations. Runtimes remain informational, while supported cache cleanup is
 presented with clear consequences.
 
-Planned branch: `storage-extension/m6-development-insights`
+Planned branch: `storage-extension-m6-development-insights`
 
 ### Milestone 7 — Hardening and portfolio release
 
@@ -70,7 +73,7 @@ files, cancellation, and cleanup failure paths. Complete public documentation,
 synthetic screenshots, limitations, and a standalone storage-extension case
 study.
 
-Planned branch: `storage-extension/m7-hardening-portfolio`
+Planned branch: `storage-extension-m7-hardening-portfolio`
 
 ## Safety principles
 
