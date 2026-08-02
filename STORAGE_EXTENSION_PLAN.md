@@ -25,9 +25,7 @@ Planned branch: `storage-extension-m1-contract`
 
 ### Milestone 2 — Read-only storage scanner
 
-Status: Implemented and validated on
-`storage-extension-m2-read-only-scanner`; awaiting review and merge into
-`storage-extension`.
+Status: Complete and merged into `storage-extension`.
 
 Build a local metadata-only scanner with progress, cancellation, protected-path
 handling, and safe recovery from inaccessible or changing files. It will not
@@ -37,6 +35,10 @@ Planned branch: `storage-extension-m2-read-only-scanner`
 
 ### Milestone 3 — Per-drive dashboard
 
+Status: Implemented and validated locally on
+`storage-extension-m3-drive-dashboard` together with Milestone 4; awaiting
+review and merge into `storage-extension`.
+
 Make disk cards interactive and add an accessible per-drive page with capacity
 information, a non-overlapping storage chart, scan completeness, and cleanup
 candidate summaries.
@@ -45,12 +47,18 @@ Planned branch: `storage-extension-m3-drive-dashboard`
 
 ### Milestone 4 — Candidate explorer
 
+Status: Implemented and validated locally on
+`storage-extension-m3-drive-dashboard` at the user's request; awaiting review
+and merge into `storage-extension`.
+
 Add sortable file results, evidence and confidence labels, `Match all` and
 `Match any` filters, individual checkboxes, and a safe `Select all visible`
 workflow. Read-only actions will include opening a containing folder and copying
 a path.
 
-Planned branch: `storage-extension-m4-candidate-explorer`
+Original planned branch: `storage-extension-m4-candidate-explorer`. This work
+was intentionally combined with the Milestone 3 branch before either milestone
+was committed or pushed.
 
 ### Milestone 5 — Guided Recycle Bin cleanup
 

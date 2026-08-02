@@ -374,6 +374,50 @@ h3 {
     padding: 1.2rem;
 }
 
+.disk-card {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.disk-card:hover,
+.disk-card:focus-visible {
+    transform: translateY(-4px) scale(1.01);
+    border-color: #9eb7d6;
+    box-shadow: 0 16px 38px rgba(25, 43, 69, 0.14);
+}
+
+.disk-card:focus-visible {
+    outline: 3px solid #ffbf47;
+    outline-offset: 4px;
+}
+
+.disk-card-action {
+    display: inline-block;
+    margin-top: 0.9rem;
+    color: var(--accent-deep);
+    font-size: 0.86rem;
+    font-weight: 750;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    .disk-card,
+    .donut-segment {
+        transition: none;
+    }
+
+    .disk-card:hover,
+    .disk-card:focus-visible {
+        transform: none;
+    }
+}
+
 progress {
     width: 100%;
     height: 0.75rem;

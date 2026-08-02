@@ -25,10 +25,10 @@
     "drive_letter": "C:",
     "volume_label": "Fictional Sample",
     "filesystem": "NTFS",
-    "total_bytes": 500000000000,
-    "used_bytes": 460000000000,
-    "free_bytes": 40000000000,
-    "percent_free": 8,
+    "total_bytes": 512110425539,
+    "used_bytes": 312179697910,
+    "free_bytes": 199930727629,
+    "percent_free": 39.04,
     "observed_at_utc": "2026-07-25T11:30:00Z"
   },
   "scan_scope": {
@@ -57,32 +57,32 @@
     "coverage": "estimated",
     "categories": {
       "free_space": {
-        "bytes": 40000000000,
+        "bytes": 199930727629,
         "measurement": "exact",
         "explanation": "Free bytes reported by the fictional drive summary."
       },
       "protected_system": {
-        "bytes": 120000000000,
+        "bytes": 80000000000,
         "measurement": "estimated",
         "explanation": "Estimated Windows and protected system storage."
       },
       "installed_applications": {
-        "bytes": 140000000000,
+        "bytes": 90000000000,
         "measurement": "estimated",
         "explanation": "Estimated installed application storage."
       },
       "user_content": {
-        "bytes": 140000000000,
+        "bytes": 100000000000,
         "measurement": "estimated",
         "explanation": "Estimated user-content storage."
       },
       "development_tools_and_caches": {
-        "bytes": 40000000000,
+        "bytes": 30000000000,
         "measurement": "estimated",
         "explanation": "Estimated development tools and supported cache locations."
       },
       "other_or_unreadable": {
-        "bytes": 20000000000,
+        "bytes": 12179697910,
         "measurement": "estimated",
         "explanation": "Storage not assigned to another non-overlapping category."
       }

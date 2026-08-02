@@ -107,6 +107,24 @@ Select a specific report with a command-line option:
 python -m dashboard --report '.\reports\first-report.json'
 ```
 
+To connect that diagnostic report to a storage analysis, select both local
+files when starting the dashboard:
+
+```powershell
+python -m dashboard `
+  --report '.\reports\first-report.json' `
+  --storage-report '.\storage-reports\YOUR-STORAGE-REPORT.json'
+```
+
+Each disk card is an accessible link to its per-drive storage page. The page
+shows a non-overlapping capacity chart, scan completeness, inaccessible paths,
+candidate totals, and a read-only candidate explorer. Candidates can be
+filtered with explicit `Match all` or `Match any` behavior, sorted, selected,
+copied, opened in their containing folder, or exported as a local review plan.
+No candidate action deletes or moves a file. If a custom diagnostic report has
+no selected storage analysis, the page explains how to create one instead of
+starting a scan silently.
+
 Alternatively, select a report through an environment variable:
 
 ```powershell
@@ -118,6 +136,11 @@ Remove-Item Env:DIAGNOSTIC_REPORT_PATH
 The command-line `--report` option takes priority over the environment
 variable. If neither is supplied, the dashboard loads
 `sample_data/sample-report.json`.
+
+Storage analysis selection follows the same pattern. `--storage-report` takes
+priority over `STORAGE_REPORT_PATH`. The fictional default diagnostic sample
+uses `sample_data/sample-storage-report.json`; custom diagnostic reports do not
+silently inherit that sample.
 
 ## Generate a local diagnostic report
 
@@ -213,10 +236,13 @@ milestone by milestone on the `storage-extension` integration branch. Its
 public roadmap is in
 [`STORAGE_EXTENSION_PLAN.md`](STORAGE_EXTENSION_PLAN.md).
 
-Milestone 1 defines an independent storage-analysis contract, synthetic sample
-data, and accounting tests. Milestone 2 adds a separately invoked, read-only
-metadata scanner for folders selected by the user. It does not provide cleanup
-actions. See
+Milestone 1 defines an independent storage-analysis contract and synthetic
+fixtures. Milestone 2 adds a separately invoked, read-only metadata scanner.
+Milestone 3 connects disk cards to an accessible per-drive dashboard with a
+non-overlapping storage chart and scan completeness. Milestone 4 adds a
+read-only candidate explorer with deterministic filtering, sorting,
+visible-only selection, copy-path, open-folder, and local review-plan export.
+It does not provide cleanup actions. See
 [`docs/storage-report-contract.md`](docs/storage-report-contract.md) and
 [`storage/README.md`](storage/README.md).
 
@@ -226,6 +252,14 @@ Run the scanner explicitly from PowerShell:
 
 ```powershell
 python -m storage --root "$env:USERPROFILE\Downloads"
+```
+
+Then display the generated report alongside a diagnostic report:
+
+```powershell
+python -m dashboard `
+  --report '.\reports\first-report.json' `
+  --storage-report '.\storage-reports\YOUR-STORAGE-REPORT.json'
 ```
 
 ## Project structure
@@ -248,9 +282,14 @@ storage-reports/       Ignored local storage-analysis reports
 ## Current limitations
 
 - The dashboard supports report schema version `1.0.0` only.
-- Reports larger than 5 MiB are rejected.
-- One report path is selected when the server starts; switch reports by
-  stopping and restarting the server.
+- Diagnostic reports larger than 5 MiB and storage reports larger than 50 MiB
+  are rejected.
+- One diagnostic report and one optional storage report are selected when the
+  server starts; switch reports by stopping and restarting the server.
+- Candidate selection is a review list only. Moving files to the Recycle Bin
+  is deliberately unavailable until the separately reviewed cleanup milestone.
+- `Open folder` is available only for eligible retained candidates whose
+  containing directory still exists and passes the current path checks.
 - Statuses use documented deterministic thresholds and are not AI diagnoses.
 - The Flask development server is intended only for local use.
 - There is no report history, database, authentication, remote access,
