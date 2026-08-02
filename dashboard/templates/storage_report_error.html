@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ error_title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='storage.css') }}">
+</head>
+<body class="error-page">
+    <main class="shell error-shell">
+        <section class="panel error-panel">
+            <p class="eyebrow">{{ drive }} storage insights</p>
+            <h1>{{ error_title }}</h1>
+            <p>{{ error_detail }}</p>
+            {% if selected_storage_report_path %}<p class="path-value">{{ selected_storage_report_path }}</p>{% endif %}
+            <h2>What to do next</h2>
+            <ul>
+                <li>Confirm the selected storage report is a JSON file produced by this toolkit.</li>
+                <li>Generate a new metadata-only scan if the report is missing or damaged.</li>
+                <li>Restart the dashboard after changing <code>--storage-report</code>.</li>
+            </ul>
+            <p><a href="{{ url_for('dashboard') }}">← Return to the diagnostic dashboard</a></p>
+        </section>
+    </main>
+</body>
+</html>

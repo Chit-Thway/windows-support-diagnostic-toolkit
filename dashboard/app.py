@@ -2,22 +2,48 @@
 
 from __future__ import annotations
 
+import secrets
 from pathlib import Path
 from typing import Any
 
-from flask import Flask, Response, render_template
+from flask import Flask, Response, jsonify, render_template, request
 
 from .evaluator import evaluate_report
 from .report_loader import ReportLoadError, load_report, resolve_report_path
+from .storage_actions import (
+    StorageActionError,
+    open_containing_folder,
+    validate_candidate_for_folder_action,
+)
+from .storage_presenter import present_storage_report
+from .storage_report_loader import (
+    StorageReportLoadError,
+    StorageReportNotFoundError,
+    load_storage_report,
+    resolve_storage_report_path,
+)
 
 
 def create_app(
     report_path: str | Path | None = None,
+    storage_report_path: str | Path | None = None,
     test_config: dict[str, Any] | None = None,
 ) -> Flask:
+    resolved_report_path = resolve_report_path(report_path)
+    resolved_storage_report_path = resolve_storage_report_path(
+        storage_report_path,
+        diagnostic_report_path=resolved_report_path,
+    )
     app = Flask(__name__, template_folder="templates", static_folder="static")
     app.config.from_mapping(
-        REPORT_PATH=str(resolve_report_path(report_path)),
+        REPORT_PATH=str(resolved_report_path),
+        STORAGE_REPORT_PATH=(
+            str(resolved_storage_report_path)
+            if resolved_storage_report_path is not None
+            else None
+        ),
+        STORAGE_ACTION_TOKEN=secrets.token_urlsafe(32),
+        OPEN_STORAGE_FOLDER_HANDLER=open_containing_folder,
     )
     if test_config:
         app.config.update(test_config)
@@ -59,6 +85,157 @@ def create_app(
             "dashboard.html",
             dashboard=evaluate_report(report),
             selected_report_path=selected_report_path,
+        )
+
+    @app.get("/storage/<drive>")
+    def storage_drive(drive: str) -> tuple[str, int] | str:
+        selected_report_path = Path(app.config["REPORT_PATH"])
+        try:
+            diagnostic_report = load_report(selected_report_path)
+        except ReportLoadError as error:
+            return (
+                render_template(
+                    "report_error.html",
+                    error_title=error.title,
+                    error_detail=error.detail,
+                    selected_report_path=selected_report_path,
+                    status_code=error.status_code,
+                ),
+                error.status_code,
+            )
+
+        dashboard_view = evaluate_report(diagnostic_report)
+        diagnostic_disk = next(
+            (item for item in dashboard_view["disks"] if item["drive"] == drive),
+            None,
+        )
+        if diagnostic_disk is None:
+            return (
+                render_template(
+                    "storage_report_error.html",
+                    error_title="Drive not found in diagnostic report",
+                    error_detail=(
+                        f"The selected diagnostic report does not contain drive {drive}."
+                    ),
+                    selected_storage_report_path=None,
+                    drive=drive,
+                ),
+                404,
+            )
+
+        configured_storage_path = app.config["STORAGE_REPORT_PATH"]
+        if configured_storage_path is None:
+            return render_template(
+                "storage_report_missing.html",
+                drive=drive,
+                diagnostic_disk=diagnostic_disk,
+                selected_report_path=selected_report_path,
+            )
+
+        selected_storage_report_path = Path(configured_storage_path)
+        try:
+            storage_report = load_storage_report(selected_storage_report_path)
+        except StorageReportNotFoundError:
+            return render_template(
+                "storage_report_missing.html",
+                drive=drive,
+                diagnostic_disk=diagnostic_disk,
+                selected_report_path=selected_report_path,
+                selected_storage_report_path=selected_storage_report_path,
+            )
+        except StorageReportLoadError as error:
+            return (
+                render_template(
+                    "storage_report_error.html",
+                    error_title=error.title,
+                    error_detail=error.detail,
+                    selected_storage_report_path=selected_storage_report_path,
+                    drive=drive,
+                ),
+                error.status_code,
+            )
+
+        storage_drive_letter = storage_report["drive"]["drive_letter"]
+        if storage_drive_letter != drive:
+            return (
+                render_template(
+                    "storage_report_error.html",
+                    error_title="Storage analysis belongs to another drive",
+                    error_detail=(
+                        f"The selected analysis is for {storage_drive_letter}, not "
+                        f"{drive}. Generate or select an analysis for this drive."
+                    ),
+                    selected_storage_report_path=selected_storage_report_path,
+                    drive=drive,
+                ),
+                409,
+            )
+
+        return render_template(
+            "storage_drive.html",
+            storage=present_storage_report(
+                storage_report,
+                diagnostic_status=diagnostic_disk["status"],
+            ),
+            selected_storage_report_path=selected_storage_report_path,
+            storage_action_token=app.config["STORAGE_ACTION_TOKEN"],
+        )
+
+    @app.post("/storage/<drive>/open-folder")
+    def open_storage_folder(drive: str):
+        supplied_token = request.form.get("action_token", "")
+        expected_token = app.config["STORAGE_ACTION_TOKEN"]
+        if not secrets.compare_digest(supplied_token, expected_token):
+            return jsonify(
+                ok=False,
+                message="The local action token is missing or no longer valid.",
+            ), 403
+
+        configured_storage_path = app.config["STORAGE_REPORT_PATH"]
+        if configured_storage_path is None:
+            return jsonify(
+                ok=False,
+                message="No storage analysis is selected.",
+            ), 404
+
+        try:
+            storage_report = load_storage_report(configured_storage_path)
+        except StorageReportLoadError as error:
+            return jsonify(ok=False, message=error.detail), error.status_code
+
+        if storage_report["drive"]["drive_letter"] != drive:
+            return jsonify(
+                ok=False,
+                message="The selected storage analysis belongs to another drive.",
+            ), 409
+
+        candidate_id = request.form.get("candidate_id", "")
+        candidate = next(
+            (
+                item
+                for item in storage_report["candidates"]
+                if item["candidate_id"] == candidate_id
+            ),
+            None,
+        )
+        if candidate is None:
+            return jsonify(
+                ok=False,
+                message="The selected candidate is not present in this report.",
+            ), 404
+
+        try:
+            folder = validate_candidate_for_folder_action(
+                storage_report,
+                candidate,
+            )
+            app.config["OPEN_STORAGE_FOLDER_HANDLER"](folder)
+        except StorageActionError as error:
+            return jsonify(ok=False, message=str(error)), 409
+
+        return jsonify(
+            ok=True,
+            message="The containing folder was opened in Windows.",
         )
 
     return app

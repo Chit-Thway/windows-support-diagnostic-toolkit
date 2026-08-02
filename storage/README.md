@@ -73,6 +73,42 @@ python -m storage `
 The scanner never starts a scan by loading a dashboard page. It runs only when
 the user invokes this command.
 
+## View a report in the local dashboard
+
+Start the dashboard with both the diagnostic report and the generated storage
+analysis:
+
+```powershell
+python -m dashboard `
+  --report '.\reports\first-report.json' `
+  --storage-report '.\storage-reports\YOUR-STORAGE-REPORT.json'
+```
+
+Open <http://127.0.0.1:5000>, then select the matching disk card. The per-drive
+page validates storage contract `1.0.0` and displays capacity, non-overlapping
+categories, scan completeness, inaccessible paths, candidate totals, and
+limitations. Its candidate explorer supports:
+
+- `Match all` and `Match any` attribute filters;
+- minimum size and age, extension, root, confidence, and eligibility filters;
+- deterministic sorting by size, modification time, path, or confidence;
+- individual selection and `Select all visible` for the current page;
+- unique selected-byte totals that do not double-count overlapping attributes;
+- copying a path, opening an eligible containing folder, and exporting a local
+  review-only cleanup plan.
+
+The page does not start scans, delete files, move files, or perform repairs.
+Selections remain a review list only. Exported review plans contain real local
+paths and are ignored by Git through `storage-cleanup-review*.json`.
+
+You can set the storage path for the current PowerShell session instead:
+
+```powershell
+$env:STORAGE_REPORT_PATH = (Resolve-Path '.\storage-reports\YOUR-STORAGE-REPORT.json').Path
+python -m dashboard --report '.\reports\first-report.json'
+Remove-Item Env:STORAGE_REPORT_PATH
+```
+
 ## Classification settings
 
 The defaults are:

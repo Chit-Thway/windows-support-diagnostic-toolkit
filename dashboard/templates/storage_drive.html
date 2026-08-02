@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ storage.drive.drive_letter }} Storage Insights</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='storage.css') }}">
+    <script src="{{ url_for('static', filename='dashboard.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='storage.js') }}" defer></script>
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to storage details</a>
+    <header class="site-header storage-header">
+        <div class="shell header-layout">
+            <div>
+                <p class="eyebrow">Storage insights · read-only analysis</p>
+                <h1>{{ storage.drive.drive_letter }} storage</h1>
+                <p class="header-copy">Understand capacity, scan coverage, and files that may deserve review. Nothing on this page modifies your files.</p>
+            </div>
+            <dl class="report-meta">
+                <div><dt>Analysis created</dt><dd><time class="js-local-time" datetime="{{ storage.generated_at_utc }}">{{ storage.generated_at_utc }}</time></dd></div>
+                <div><dt>Contract</dt><dd>{{ storage.schema_version }}</dd></div>
+                <div><dt>Local report</dt><dd>{{ selected_storage_report_path.name }}</dd></div>
+            </dl>
+        </div>
+    </header>
+
+    <main id="main-content" class="shell storage-page">
+        <nav class="back-nav" aria-label="Dashboard navigation">
+            <a href="{{ url_for('dashboard') }}">← Back to diagnostic dashboard</a>
+        </nav>
+
+        <section class="storage-overview" aria-labelledby="capacity-heading">
+            <article class="panel capacity-panel status-panel status-{{ storage.drive.diagnostic_status_class }}">
+                <div class="card-heading">
+                    <div>
+                        <p class="eyebrow">Diagnostic disk status</p>
+                        <h2 id="capacity-heading">{{ storage.drive.diagnostic_status }}</h2>
+                    </div>
+                    <span class="status-badge status-{{ storage.drive.diagnostic_status_class }}">{{ storage.drive.percent_free }}% free</span>
+                </div>
+                <dl class="capacity-values">
+                    <div><dt>Total</dt><dd>{{ storage.drive.total_size }}</dd></div>
+                    <div><dt>Used</dt><dd>{{ storage.drive.used_size }}</dd></div>
+                    <div><dt>Free</dt><dd>{{ storage.drive.free_size }}</dd></div>
+                    <div><dt>Volume</dt><dd>{{ storage.drive.volume_label or "No label" }}</dd></div>
+                    <div><dt>Filesystem</dt><dd>{{ storage.drive.filesystem or "Unavailable" }}</dd></div>
+                </dl>
+            </article>
+
+            <article class="panel scan-panel status-panel status-{{ storage.scan.status_class }}">
+                <div class="card-heading">
+                    <div>
+                        <p class="eyebrow">Collection completeness</p>
+                        <h2>{{ storage.scan.status_label }}</h2>
+                    </div>
+                    <span class="status-badge status-{{ storage.scan.status_class }}">{{ storage.scan.detail_coverage_label }} details</span>
+                </div>
+                <dl class="scan-values">
+                    <div><dt>Duration</dt><dd>{{ storage.scan.duration_seconds }} seconds</dd></div>
+                    <div><dt>Files examined</dt><dd>{{ storage.scan.files_examined_display }}</dd></div>
+                    <div><dt>Directories</dt><dd>{{ storage.scan.directories_examined_display }}</dd></div>
+                    <div><dt>Bytes examined</dt><dd>{{ storage.scan.bytes_examined_display }}</dd></div>
+                    <div><dt>Category coverage</dt><dd>{{ storage.accounting_coverage }}</dd></div>
+                    <div><dt>Inaccessible paths</dt><dd>{{ storage.inaccessible_paths | length }}</dd></div>
+                </dl>
+                {% if storage.scan.status != "complete" %}
+                    <p class="support-note"><strong>This analysis is incomplete.</strong> Review the errors and limitations below before drawing conclusions.</p>
+                {% endif %}
+            </article>
+        </section>
+
+        <section aria-labelledby="breakdown-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Non-overlapping accounting</p>
+                    <h2 id="breakdown-heading">Where the drive space is used</h2>
+                </div>
+                <span class="status-badge status-unavailable">{{ storage.accounting_coverage }}</span>
+            </div>
+            <div class="storage-chart-layout panel">
+                <figure class="donut-figure">
+                    <svg class="donut-chart" viewBox="0 0 42 42" role="img" aria-labelledby="donut-title donut-description">
+                        <title id="donut-title">Storage distribution for {{ storage.drive.drive_letter }}</title>
+                        <desc id="donut-description">A non-overlapping breakdown of free space, system storage, applications, user content, development storage, and other or unreadable storage.</desc>
+                        <circle class="donut-track" cx="21" cy="21" r="15.9155" pathLength="100"></circle>
+                        {% for category in storage.categories %}
+                            {% if category.chart_percent > 0 %}
+                                <circle class="donut-segment chart-{{ category.style_class }}"
+                                        cx="21" cy="21" r="15.9155" pathLength="100"
+                                        stroke-dasharray="{{ category.chart_percent }} {{ 100 - category.chart_percent }}"
+                                        stroke-dashoffset="{{ category.chart_offset }}"></circle>
+                            {% endif %}
+                        {% endfor %}
+                        <text class="donut-value" x="21" y="20">{{ storage.drive.percent_free }}%</text>
+                        <text class="donut-label" x="21" y="24">free</text>
+                    </svg>
+                    <figcaption>Every byte appears in one category only. Candidate attributes are deliberately excluded from this chart because they can overlap.</figcaption>
+                </figure>
+
+                <div class="category-list" role="list" aria-label="Storage category values">
+                    {% for category in storage.categories %}
+                        <article class="category-row" role="listitem">
+                            <span class="category-swatch chart-{{ category.style_class }}" aria-hidden="true"></span>
+                            <div class="category-copy">
+                                <div class="category-heading">
+                                    <h3>{{ category.label }}</h3>
+                                    <strong>{{ category.size }}</strong>
+                                </div>
+                                <p>{{ category.percent }}% · {{ category.measurement }} · {{ category.exact_bytes }}</p>
+                                <p class="support-note">{{ category.explanation }}</p>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <section aria-labelledby="candidates-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Review evidence</p>
+                    <h2 id="candidates-heading">Cleanup-candidate summary</h2>
+                </div>
+            </div>
+            <div class="panel candidate-total">
+                <div><span class="candidate-total-number">{{ storage.candidate_summary.total_unique_candidates }}</span><span>unique candidates</span></div>
+                <div><span class="candidate-total-number">{{ storage.candidate_summary.total_unique_candidate_size }}</span><span>unique candidate size</span></div>
+                <p>Attribute totals overlap. A file with several attributes is counted once in the unique total above.</p>
+            </div>
+            <div class="candidate-summary-grid">
+                {% for attribute in storage.candidate_summary.attributes %}
+                    <article class="panel candidate-summary-card">
+                        <p class="eyebrow">{{ attribute.label }}</p>
+                        <p class="candidate-count">{{ attribute.count }}</p>
+                        <p>{{ attribute.size }} across matching candidates</p>
+                    </article>
+                {% endfor %}
+            </div>
+            {% if storage.candidate_summary.total_unique_candidates == 0 %}
+                <div class="panel empty-state"><h3>No cleanup candidates reported</h3><p>The selected scan did not identify files matching the configured review rules.</p></div>
+            {% endif %}
+            {% if storage.candidate_summary.excluded_count %}
+                <p class="panel safety-note"><strong>{{ storage.candidate_summary.excluded_count }} protected or unavailable record(s)</strong> are excluded from cleanup eligibility.</p>
+            {% endif %}
+            {% if storage.candidate_summary.omitted_candidates %}
+                <p class="panel safety-note"><strong>{{ storage.candidate_summary.omitted_candidates }} candidate detail(s) were omitted by the report limit.</strong> Summary totals include them, but only retained rows can be filtered or selected.</p>
+            {% endif %}
+        </section>
+
+        <section class="candidate-explorer" aria-labelledby="explorer-heading" data-candidate-explorer data-page-size="25">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Retained candidate details</p>
+                    <h2 id="explorer-heading">Candidate explorer</h2>
+                </div>
+                <span class="status-badge status-unavailable">Read-only review</span>
+            </div>
+
+            <form class="panel explorer-controls" data-filter-form>
+                <fieldset class="attribute-filters">
+                    <legend>Candidate attributes</legend>
+                    {% for attribute in storage.candidate_summary.attributes %}
+                        <label><input type="checkbox" name="attribute" value="{{ attribute.key }}"> {{ attribute.label }}</label>
+                    {% endfor %}
+                </fieldset>
+
+                <fieldset class="match-mode">
+                    <legend>Multiple attributes</legend>
+                    <label><input type="radio" name="match-mode" value="all" checked> Match all</label>
+                    <label><input type="radio" name="match-mode" value="any"> Match any</label>
+                </fieldset>
+
+                <div class="filter-grid">
+                    <label>Minimum size (MiB)<input type="number" name="minimum-size" min="0" step="1" inputmode="numeric"></label>
+                    <label>Minimum age (days)<input type="number" name="minimum-age" min="0" step="1" inputmode="numeric"></label>
+                    <label>File extension<input type="text" name="extension" placeholder=".zip"></label>
+                    <label>Path contains<input type="text" name="path-query" placeholder="Downloads\Archive"></label>
+                    <label>Scan root<select name="scan-root"><option value="">All roots</option>{% for root in storage.candidate_root_options %}<option value="{{ root }}">{{ root }}</option>{% endfor %}</select></label>
+                    <label>Confidence<select name="confidence"><option value="">Any confidence</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
+                    <label>Sort by<select name="sort"><option value="largest">Largest first</option><option value="smallest">Smallest first</option><option value="oldest">Oldest modified first</option><option value="newest">Newest modified first</option><option value="path">Path A–Z</option><option value="confidence">Confidence</option></select></label>
+                </div>
+
+                <div class="filter-footer">
+                    <label><input type="checkbox" name="include-excluded"> Show protected and unavailable records</label>
+                    <button class="secondary-button" type="reset">Reset filters</button>
+                </div>
+            </form>
+
+            <div class="panel selection-toolbar" aria-label="Candidate selection">
+                <div class="selection-totals" aria-live="polite">
+                    <strong data-selected-count>0 selected</strong>
+                    <span data-selected-size>0 B</span>
+                    <span data-visible-selection>0 visible on this page</span>
+                </div>
+                <div class="selection-actions">
+                    <button type="button" class="secondary-button" data-select-visible>Select all visible</button>
+                    <button type="button" class="secondary-button" data-clear-selection disabled>Clear selection</button>
+                    <button type="button" class="primary-button" data-export-selection disabled>Export cleanup plan</button>
+                </div>
+            </div>
+
+            <p class="explorer-result-summary" data-result-summary aria-live="polite"></p>
+            <p class="action-feedback" data-action-feedback role="status" aria-live="polite"></p>
+
+            <div class="table-panel panel candidate-table-panel">
+                <table class="candidate-table">
+                    <thead>
+                        <tr>
+                            <th scope="col"><span class="visually-hidden">Select</span></th>
+                            <th scope="col">File</th>
+                            <th scope="col">Size</th>
+                            <th scope="col">Modified</th>
+                            <th scope="col">Attributes</th>
+                            <th scope="col">Confidence</th>
+                            <th scope="col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody data-candidate-rows>
+                        {% for candidate in storage.candidates %}
+                            <tr data-candidate-row
+                                data-candidate-id="{{ candidate.candidate_id }}"
+                                data-candidate-name="{{ candidate.name }}"
+                                data-candidate-path="{{ candidate.path }}"
+                                data-path-sort="{{ candidate.path | lower }}"
+                                data-root="{{ candidate.scan_root }}"
+                                data-extension="{{ candidate.extension | lower }}"
+                                data-size-bytes="{{ candidate.size_sort }}"
+                                data-age-days="{{ candidate.age_days if candidate.age_days is not none else '' }}"
+                                data-modified="{{ candidate.modified_at_utc or '' }}"
+                                data-confidence="{{ candidate.confidence }}"
+                                data-eligibility="{{ candidate.eligibility }}"
+                                data-attributes="{{ candidate.attributes_filter }}">
+                                <td>
+                                    <input type="checkbox"
+                                           data-candidate-select
+                                           aria-label="Select {{ candidate.name }}"
+                                           {% if not candidate.selectable %}disabled title="{{ candidate.protection.explanation }}"{% endif %}>
+                                </td>
+                                <th scope="row">
+                                    <span class="candidate-name">{{ candidate.name }}</span>
+                                    <span class="secondary-text">{{ candidate.directory }}</span>
+                                    <details class="candidate-details">
+                                        <summary>Path and evidence</summary>
+                                        <p class="path-value">{{ candidate.path }}</p>
+                                        <p><strong>Protection:</strong> {{ candidate.protection.explanation }}</p>
+                                        <ul>
+                                            {% for evidence in candidate.evidence %}
+                                                <li><strong>{{ evidence.attribute | replace('_', ' ') | title }}:</strong> {{ evidence.description }}{% if evidence.observed_value is not none %} <span class="secondary-text">Observed: {{ evidence.observed_value }}</span>{% endif %}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </details>
+                                </th>
+                                <td>{{ candidate.size }}</td>
+                                <td>{% if candidate.modified_at_utc %}<time class="js-local-time" datetime="{{ candidate.modified_at_utc }}">{{ candidate.modified_at_utc }}</time>{% else %}Unavailable{% endif %}</td>
+                                <td><div class="attribute-badges">{% for attribute in candidate.attributes_view %}<span class="attribute-badge">{{ attribute.label }}</span>{% endfor %}</div></td>
+                                <td><span class="confidence confidence-{{ candidate.confidence }}">{{ candidate.confidence_label }}</span><span class="secondary-text">{{ candidate.eligibility_label }}</span></td>
+                                <td>
+                                    <div class="row-actions">
+                                        <button type="button" class="text-button" data-copy-path>Copy path</button>
+                                        <button type="button" class="text-button" data-open-folder
+                                                data-action-url="{{ url_for('open_storage_folder', drive=storage.drive.drive_letter) }}"
+                                                data-action-token="{{ storage_action_token }}"
+                                                {% if not candidate.selectable %}disabled title="Only eligible regular files can open their containing folder."{% endif %}>Open folder</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="empty-state" data-filter-empty hidden>
+                    <h3>No candidates match these filters</h3>
+                    <p>Adjust the filters or reset them to see retained candidate records.</p>
+                </div>
+            </div>
+
+            <nav class="panel pagination" aria-label="Candidate pages">
+                <button type="button" class="secondary-button" data-page-previous disabled>Previous</button>
+                <span data-page-status>Page 1 of 1</span>
+                <button type="button" class="secondary-button" data-page-next disabled>Next</button>
+            </nav>
+
+            <p class="milestone-note">Selection creates a local review list only. No file is deleted, moved, repaired, or uploaded in this milestone.</p>
+        </section>
+
+        <section aria-labelledby="scope-heading">
+            <div class="section-heading"><div><p class="eyebrow">Observed locations</p><h2 id="scope-heading">Scan scope</h2></div></div>
+            <div class="root-list">
+                {% for root in storage.roots %}
+                    <article class="panel root-card">
+                        <div class="card-heading"><h3>{{ root.display_path }}</h3><span class="status-badge status-{{ 'healthy' if root.status == 'complete' else 'unavailable' }}">{{ root.status_label }}</span></div>
+                        <dl class="metric-details"><div><dt>Files</dt><dd>{{ root.files_examined }}</dd></div><div><dt>Directories</dt><dd>{{ root.directories_examined }}</dd></div><div><dt>Examined</dt><dd>{{ root.bytes_examined_display }}</dd></div></dl>
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        {% if storage.scan_errors or storage.inaccessible_paths %}
+            <section aria-labelledby="scan-errors-heading">
+                <div class="section-heading"><div><p class="eyebrow">Incomplete observations</p><h2 id="scan-errors-heading">Scan errors and inaccessible paths</h2></div></div>
+                <div class="error-list">
+                    {% for error in storage.scan_errors %}
+                        <article class="panel status-panel status-unavailable"><div class="card-heading"><h3>{{ error.code | replace('_', ' ') | title }}</h3><span class="status-badge status-unavailable">{{ error.scope | title }}</span></div><p>{{ error.message }}</p>{% if error.path %}<p class="path-value">{{ error.path }}</p>{% endif %}</article>
+                    {% endfor %}
+                    {% for item in storage.inaccessible_paths %}
+                        <article class="panel status-panel status-unavailable"><div class="card-heading"><h3>{{ item.error_type | replace('_', ' ') | title }}</h3><span class="status-badge status-unavailable">Inaccessible</span></div><p>{{ item.message }}</p><p class="path-value">{{ item.path }}</p></article>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+
+        <section aria-labelledby="limitations-heading">
+            <div class="section-heading"><div><p class="eyebrow">Interpret with care</p><h2 id="limitations-heading">Limitations</h2></div></div>
+            <div class="panel limitations-panel"><ul>{% for limitation in storage.limitations %}<li>{{ limitation }}</li>{% endfor %}</ul></div>
+        </section>
+    </main>
+
+    <footer class="site-footer"><div class="shell"><p><strong>Local and read-only:</strong> no report data is uploaded, and viewing this page cannot modify or remove files.</p></div></footer>
+</body>
+</html>
