@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Review Recycle Bin action</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='storage.css') }}">
+    <script src="{{ url_for('static', filename='dashboard.js') }}" defer></script>
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to cleanup review</a>
+    <header class="site-header storage-header">
+        <div class="shell header-layout">
+            <div>
+                <p class="eyebrow">Guided cleanup · final review</p>
+                <h1>Review every file before recycling</h1>
+                <p class="header-copy">This page is a preview. No file has been moved or deleted.</p>
+            </div>
+            <dl class="report-meta">
+                <div><dt>Drive</dt><dd>{{ preview.drive_letter }}</dd></div>
+                <div><dt>Files selected</dt><dd>{{ candidates | length }}</dd></div>
+                <div><dt>Estimated recovery</dt><dd>{{ total_size }}</dd></div>
+            </dl>
+        </div>
+    </header>
+
+    <main id="main-content" class="shell cleanup-page">
+        <nav class="back-nav" aria-label="Storage navigation">
+            <a href="{{ url_for('storage_drive', drive=preview.drive_letter) }}">← Return without changing files</a>
+        </nav>
+
+        <section class="panel cleanup-warning" aria-labelledby="warning-heading">
+            <h2 id="warning-heading">What confirmation will do</h2>
+            <p>Each listed regular file will be checked again and then sent to the Windows Recycle Bin. The toolkit never permanently deletes it as a fallback, never processes folders, and never requests elevation.</p>
+            <p>Windows manages Recycle Bin retention and recovery, so restoration is not guaranteed indefinitely.</p>
+        </section>
+
+        <section class="panel cleanup-summary" aria-labelledby="summary-heading">
+            <h2 id="summary-heading">Reviewed selection</h2>
+            <dl class="cleanup-summary-grid">
+                <div><dt>Exact files</dt><dd>{{ candidates | length }}</dd></div>
+                <div><dt>Estimated recovery</dt><dd>{{ total_size }}</dd></div>
+                <div><dt>Review expires</dt><dd><time class="js-local-time" datetime="{{ preview.expires_at_utc.isoformat() }}">{{ preview.expires_at_utc.isoformat() }}</time></dd></div>
+            </dl>
+        </section>
+
+        <section aria-labelledby="files-heading">
+            <div class="section-heading"><div><p class="eyebrow">Exact-path preview</p><h2 id="files-heading">Files included</h2></div></div>
+            <ol class="cleanup-file-list">
+                {% for candidate in candidates %}
+                    <li class="panel cleanup-file">
+                        <div class="cleanup-file-heading">
+                            <div><h3>{{ candidate.name }}</h3><p class="path-value">{{ candidate.path }}</p></div>
+                            <strong>{{ candidate.size }}</strong>
+                        </div>
+                        <div class="attribute-badges" aria-label="Candidate attributes">
+                            {% for attribute in candidate.attributes_view %}<span class="attribute-badge">{{ attribute.label }}</span>{% endfor %}
+                        </div>
+                        <p><strong>Confidence:</strong> {{ candidate.confidence_label }} — classification strength, not proof that recycling is safe.</p>
+                        <ul class="cleanup-evidence">
+                            {% for evidence in candidate.evidence %}<li>{{ evidence.description }}</li>{% endfor %}
+                        </ul>
+                    </li>
+                {% endfor %}
+            </ol>
+        </section>
+
+        <form class="panel cleanup-confirmation" method="post" action="{{ url_for('storage_cleanup_confirm', drive=preview.drive_letter) }}">
+            <h2>Final confirmation</h2>
+            <input type="hidden" name="action_token" value="{{ storage_action_token }}">
+            <input type="hidden" name="preview_token" value="{{ preview.token }}">
+            <label class="confirmation-label"><input type="checkbox" name="confirm_cleanup" value="yes" required> I reviewed every exact path above and want to move only these files to the Windows Recycle Bin.</label>
+            {% if preview.requires_additional_confirmation %}
+                <p><strong>Additional confirmation is required</strong> because this selection contains many files or a large total size.</p>
+                <label class="confirmation-phrase">Type <code>{{ preview.confirmation_phrase }}</code> exactly
+                    <input type="text" name="confirmation_phrase" autocomplete="off" spellcheck="false" required>
+                </label>
+            {% endif %}
+            <button class="danger-button" type="submit">Move reviewed files to Recycle Bin</button>
+            <p class="support-note">The confirmation token is short-lived and can be used only once.</p>
+        </form>
+    </main>
+</body>
+</html>

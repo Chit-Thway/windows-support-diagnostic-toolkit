@@ -18,6 +18,7 @@ from .classifier import (
     classify_file,
     is_development_cache_path,
 )
+from .development import DevelopmentInsightsInspector
 from .path_policy import (
     ProtectedPathPolicy,
     UnsafeScanRootError,
@@ -49,6 +50,7 @@ class ScannerOptions:
     )
     maximum_candidates_retained: int = 5000
     development_cache_roots: tuple[str | Path, ...] = ()
+    discover_development_insights: bool = True
     progress_every_files: int = 100
 
     def __post_init__(self) -> None:
@@ -85,7 +87,7 @@ class _ScanState:
     scan_errors: list[dict[str, Any]] = field(default_factory=list)
     seen_file_identities: set[tuple[object, ...]] = field(default_factory=set)
     user_content_bytes: int = 0
-    development_cache_bytes: int = 0
+    development_storage_bytes: int = 0
     cancelled: bool = False
     attribute_summaries: dict[str, dict[str, int]] = field(
         default_factory=lambda: {
@@ -151,11 +153,17 @@ class StorageScanner:
         volume_information: (
             Callable[[str], tuple[str | None, str | None]] | None
         ) = None,
+        development_inspector_factory: (
+            Callable[..., DevelopmentInsightsInspector] | None
+        ) = None,
     ) -> None:
         self._path_policy = path_policy or ProtectedPathPolicy()
         self._clock = clock or (lambda: datetime.now(timezone.utc))
         self._disk_usage = disk_usage or shutil.disk_usage
         self._volume_information = volume_information or _volume_information
+        self._development_inspector_factory = (
+            development_inspector_factory or DevelopmentInsightsInspector
+        )
 
     def scan(
         self,
@@ -199,6 +207,10 @@ class StorageScanner:
             )
 
         started_at = self._clock().astimezone(timezone.utc)
+        development_inspector = self._development_inspector_factory(
+            scan_roots=scan_roots,
+            enabled=options.discover_development_insights,
+        )
         state = _ScanState(
             started_at=started_at,
             maximum_candidates_retained=options.maximum_candidates_retained,
@@ -220,6 +232,7 @@ class StorageScanner:
                 state=state,
                 options=options,
                 development_cache_roots=development_cache_roots,
+                development_inspector=development_inspector,
                 cancel_check=cancel_check,
                 progress_callback=progress_callback,
             )
@@ -316,6 +329,9 @@ class StorageScanner:
                         options.maximum_candidates_retained
                     ),
                     "use_last_access_as_classification_evidence": False,
+                    "discover_development_insights": (
+                        options.discover_development_insights
+                    ),
                 },
             },
             "accounting": accounting,
@@ -334,6 +350,9 @@ class StorageScanner:
             "candidates": state.candidates,
             "inaccessible_paths": state.inaccessible_paths,
             "scan_errors": state.scan_errors,
+            "development_insights": development_inspector.build_report(
+                scan_status=status
+            ),
             "limitations": self._limitations(state, development_cache_roots),
         }
 
@@ -351,6 +370,7 @@ class StorageScanner:
         state: _ScanState,
         options: ScannerOptions,
         development_cache_roots: tuple[Path, ...],
+        development_inspector: DevelopmentInsightsInspector,
         cancel_check: Callable[[], bool],
         progress_callback: Callable[[ProgressUpdate], None] | None,
     ) -> dict[str, Any]:
@@ -380,6 +400,7 @@ class StorageScanner:
                 )
                 continue
 
+            development_inspector.observe_directory(directory, entries)
             for entry in entries:
                 if cancel_check():
                     state.cancelled = True
@@ -424,10 +445,23 @@ class StorageScanner:
                 in_cache = is_development_cache_path(
                     path, development_cache_roots
                 )
-                if in_cache:
-                    state.development_cache_bytes += size_bytes
+                in_discovered_development_location = (
+                    development_inspector.observe_file(path, size_bytes)
+                )
+                if in_cache or in_discovered_development_location:
+                    state.development_storage_bytes += size_bytes
                 else:
                     state.user_content_bytes += size_bytes
+
+                if in_discovered_development_location:
+                    if (
+                        progress_callback is not None
+                        and state.files_examined % options.progress_every_files == 0
+                    ):
+                        progress_callback(
+                            self._progress_update(state, str(path))
+                        )
+                    continue
 
                 try:
                     created_at = _timestamp_from_epoch(metadata.st_ctime)
@@ -776,7 +810,7 @@ class StorageScanner:
         total_bytes: int,
         status: str,
     ) -> dict[str, Any]:
-        observed_used = state.user_content_bytes + state.development_cache_bytes
+        observed_used = state.user_content_bytes + state.development_storage_bytes
         if observed_used > used_bytes:
             self._record_scan_error(
                 state,
@@ -793,7 +827,7 @@ class StorageScanner:
             development_cache_bytes = 0
         else:
             user_content_bytes = state.user_content_bytes
-            development_cache_bytes = state.development_cache_bytes
+            development_cache_bytes = state.development_storage_bytes
 
         other_bytes = used_bytes - user_content_bytes - development_cache_bytes
         coverage = "partial" if status != "complete" or state.scan_errors else "estimated"
@@ -839,8 +873,9 @@ class StorageScanner:
                         else "unavailable"
                     ),
                     "explanation": (
-                        "Logical file bytes observed only in development-cache "
-                        "roots explicitly supplied by the user."
+                        "Logical file bytes observed in supported development "
+                        "locations or explicit development-cache roots inside "
+                        "the selected scan scope."
                     ),
                 },
                 "other_or_unreadable": {

@@ -71,6 +71,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--temporary-min-hours", type=int, default=168)
     parser.add_argument("--max-candidates", type=int, default=5000)
     parser.add_argument(
+        "--no-development-insights",
+        action="store_true",
+        help=(
+            "Disable local Python, pip-cache, and Java discovery. Selected "
+            "folders are still scanned normally."
+        ),
+    )
+    parser.add_argument(
         "--quiet",
         action="store_true",
         help="Suppress progress updates; the final result is still printed.",
@@ -138,6 +146,9 @@ def main(argv: list[str] | None = None) -> int:
             classification=classification_options,
             maximum_candidates_retained=arguments.max_candidates,
             development_cache_roots=tuple(arguments.development_cache_root),
+            discover_development_insights=(
+                not arguments.no_development_insights
+            ),
         )
         output_path = resolve_output_path(arguments.output)
         scanner = StorageScanner()

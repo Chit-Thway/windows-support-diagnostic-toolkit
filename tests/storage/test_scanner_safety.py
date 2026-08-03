@@ -8,6 +8,7 @@ SCANNER_FILES = (
     REPOSITORY_ROOT / "storage" / "scanner.py",
     REPOSITORY_ROOT / "storage" / "classifier.py",
     REPOSITORY_ROOT / "storage" / "path_policy.py",
+    REPOSITORY_ROOT / "storage" / "development.py",
 )
 
 PROHIBITED_CALLS = {

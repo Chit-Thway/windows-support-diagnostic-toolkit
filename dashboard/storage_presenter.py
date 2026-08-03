@@ -28,6 +28,19 @@ ATTRIBUTE_PRESENTATION = (
     ("development_cache", "Development cache"),
 )
 
+DEVELOPMENT_KIND_LABELS = {
+    "virtual_environment": "Python virtual environment",
+    "package_cache": "Package cache",
+    "runtime_or_sdk": "Runtime or SDK",
+}
+
+DEVELOPMENT_SOURCE_LABELS = {
+    "pyvenv_cfg": "pyvenv.cfg marker",
+    "pip_cache_dir": "pip cache dir command",
+    "java_system_properties": "Java system properties",
+    "java_home": "JAVA_HOME",
+}
+
 
 def format_bytes(value: int | None) -> str:
     """Return a compact binary-size label without losing the byte total."""
@@ -59,6 +72,75 @@ def _parse_utc(value: str | None) -> datetime | None:
         return None
 
 
+def _present_development_insights(report: dict[str, Any]) -> dict[str, Any]:
+    insights = report.get("development_insights")
+    if insights is None:
+        return {
+            "status": "unavailable",
+            "status_label": "Unavailable",
+            "status_class": "unavailable",
+            "locations": [],
+            "python_locations": [],
+            "java_locations": [],
+            "errors": [],
+            "limitations": [
+                "This older storage report does not contain development-storage insights."
+            ],
+        }
+
+    locations = []
+    for location in insights["locations"]:
+        active = location["active"]
+        locations.append(
+            {
+                **location,
+                "ecosystem_label": location["ecosystem"].title(),
+                "kind_label": DEVELOPMENT_KIND_LABELS[location["kind"]],
+                "source_label": DEVELOPMENT_SOURCE_LABELS[location["source"]],
+                "size_display": format_bytes(location["bytes_observed"]),
+                "files_display": (
+                    f"{location['files_observed']:,}"
+                    if location["files_observed"] is not None
+                    else "Not measured"
+                ),
+                "measurement_label": _title_token(location["measurement"]),
+                "coverage_label": _title_token(location["coverage"]),
+                "active_label": (
+                    "Active for this scan"
+                    if active is True
+                    else "Not active for this scan"
+                    if active is False
+                    else "Not applicable"
+                ),
+                "scope_label": (
+                    "Measured in selected roots"
+                    if location["within_scan_scope"]
+                    else "Outside selected roots — not measured"
+                ),
+                "cleanup_policy_label": _title_token(
+                    location["cleanup_policy"]
+                ),
+            }
+        )
+
+    return {
+        **insights,
+        "status_label": _title_token(insights["status"]),
+        "status_class": (
+            "healthy" if insights["status"] == "complete" else "unavailable"
+        ),
+        "locations": locations,
+        "python_locations": [
+            location
+            for location in locations
+            if location["ecosystem"] == "python"
+        ],
+        "java_locations": [
+            location
+            for location in locations
+            if location["ecosystem"] == "java"
+        ],
+    }
 def present_storage_report(
     report: dict[str, Any], diagnostic_status: str
 ) -> dict[str, Any]:
@@ -207,5 +289,6 @@ def present_storage_report(
         "roots": roots,
         "inaccessible_paths": report["inaccessible_paths"],
         "scan_errors": report["scan_errors"],
+        "development": _present_development_insights(report),
         "limitations": report["limitations"],
     }

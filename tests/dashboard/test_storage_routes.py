@@ -43,6 +43,8 @@ def test_valid_storage_report_renders_drive_dashboard() -> None:
     assert b"Match any" in response.data
     assert b"Select all visible" in response.data
     assert b"Export cleanup plan" in response.data
+    assert b"Review Recycle Bin action" in response.data
+    assert b"Development storage insights" in response.data
     assert b"Path contains" in response.data
     assert b'role="img"' in response.data
     assert b"read-only" in response.data.lower()
@@ -184,6 +186,31 @@ def test_candidate_row_contains_evidence_and_safe_actions() -> None:
     assert b"Open folder" in response.data
     assert b'data-attributes="stale,likely_incomplete,large"' in response.data
     assert b'data-action-token="fixed-token"' in response.data
+    assert b"python -m pip cache purge" in response.data
+    assert b"Java 21.0.4" in response.data
+    assert b"Automatic cleanup" in response.data
+
+
+def test_development_insight_content_is_html_escaped(tmp_path: Path) -> None:
+    report = json.loads(
+        (REPOSITORY_ROOT / "sample_data" / "sample-storage-report.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    report["development_insights"]["locations"][0]["display_name"] = (
+        "<script>alert('fictional')</script>"
+    )
+    storage_report = tmp_path / "escaped-storage-report.json"
+    storage_report.write_text(json.dumps(report), encoding="utf-8")
+    response = create_app(
+        report_path=REPOSITORY_ROOT / "sample_data" / "sample-report.json",
+        storage_report_path=storage_report,
+        test_config={"TESTING": True},
+    ).test_client().get("/storage/C:")
+
+    assert response.status_code == 200
+    assert b"<script>alert" not in response.data
+    assert b"&lt;script&gt;alert" in response.data
 
 
 def test_unavailable_candidate_has_disabled_selection_and_folder_action() -> None:

@@ -48,6 +48,7 @@ The storage report does not contain:
   "candidates": [],
   "inaccessible_paths": [],
   "scan_errors": [],
+  "development_insights": {},
   "limitations": []
 }
 ```
@@ -66,6 +67,7 @@ The storage report does not contain:
 | `candidates` | Bounded file-level metadata, evidence, confidence, and protection. |
 | `inaccessible_paths` | Paths that could not be inspected safely. |
 | `scan_errors` | Structured, recoverable or terminal scan errors. |
+| `development_insights` | Optional supported Python, pip-cache, and Java locations with explicit measurement boundaries. |
 | `limitations` | Plain-language qualifications a consumer must display. |
 
 ## Scanner and scan state
@@ -143,7 +145,8 @@ The options snapshot makes later classifications reproducible:
 - minimum age for temporary-file evidence;
 - maximum detailed candidates retained;
 - an explicit `false` value for using last-access time as classification
-  evidence.
+  evidence;
+- whether supported development-storage discovery was enabled.
 
 Last-access time may be displayed when available, but Windows can defer or
 disable its updates. It must not be used as the sole cleanup signal.
@@ -175,6 +178,34 @@ all six category bytes = drive total_bytes
 ```
 
 Files with cleanup attributes are not separate chart slices.
+
+## Development-storage insights
+
+New Milestone 6 reports include the optional `development_insights` object.
+Keeping it optional preserves compatibility with earlier schema `1.0.0`
+fixtures and reports.
+
+Each detected location records:
+
+- ecosystem and kind;
+- exact local path and documented discovery source;
+- optional version and active-state evidence;
+- whether it is inside a user-approved scan root;
+- observed files and bytes only when it is inside that scope;
+- measurement coverage;
+- cleanup policy and an optional supported manual command;
+- a consequence statement;
+- the constant `automatic_cleanup_candidate: false`.
+
+Supported sources are `pyvenv.cfg` metadata, `python -m pip cache dir`, Java
+system-properties output, and a valid `JAVA_HOME` fallback. A discovery result
+never starts a new recursive scan. Out-of-scope locations must retain null
+counts with `not_measured` and `not_applicable` labels.
+
+Contract validation rejects a report that also presents a file inside an
+informational development location as a cleanup candidate. See
+[`development-storage-insights.md`](development-storage-insights.md) for the
+product behavior and limitations.
 
 ## Candidate records
 

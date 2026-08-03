@@ -16,6 +16,7 @@ from storage.contract import (
     validate_storage_report,
     write_storage_report,
 )
+from storage.development import CommandResult, DevelopmentInsightsInspector
 from storage.path_policy import FILE_ATTRIBUTE_REPARSE_POINT, ProtectedPathPolicy
 from storage.scanner import ScannerOptions, StorageScanner
 
@@ -259,6 +260,87 @@ def test_explicit_development_cache_is_classified_separately(
     assert report["accounting"]["categories"][
         "development_tools_and_caches"
     ]["bytes"] == len(b"cache")
+
+
+def test_python_environment_is_informational_and_never_a_candidate(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "Development"
+    environment_root = root / "support-app" / ".venv"
+    package = environment_root / "Lib" / "site-packages" / "old.py"
+    package.parent.mkdir(parents=True)
+    marker = environment_root / "pyvenv.cfg"
+    marker.write_text("fictional marker", encoding="utf-8")
+    package.write_bytes(b"old package")
+    set_modified_time(package, datetime(2020, 1, 1, tzinfo=timezone.utc))
+    options = ScannerOptions(
+        classification=ClassificationOptions(
+            stale_after_days=1,
+            large_file_threshold_bytes=1,
+            incomplete_min_age_hours=1,
+            temporary_min_age_hours=1,
+        )
+    )
+
+    report = make_scanner().scan([root], options=options)
+
+    validate_storage_report(report)
+    environment = next(
+        location
+        for location in report["development_insights"]["locations"]
+        if location["kind"] == "virtual_environment"
+    )
+    assert report["candidates"] == []
+    assert environment["automatic_cleanup_candidate"] is False
+    assert environment["bytes_observed"] == (
+        marker.stat().st_size + package.stat().st_size
+    )
+    assert report["accounting"]["categories"][
+        "development_tools_and_caches"
+    ]["bytes"] == environment["bytes_observed"]
+
+
+def test_supported_pip_cache_uses_guidance_instead_of_file_candidates(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "Development"
+    cache = root / "pip-cache"
+    cache.mkdir(parents=True)
+    wheel = cache / "old.whl"
+    wheel.write_bytes(b"cache payload")
+    set_modified_time(wheel, datetime(2020, 1, 1, tzinfo=timezone.utc))
+
+    def inspector_factory(**kwargs):
+        return DevelopmentInsightsInspector(
+            **kwargs,
+            python_executable=r"C:\FictionalPython\python.exe",
+            command_runner=lambda _command: CommandResult(0, str(cache), ""),
+            java_finder=lambda _name: None,
+        )
+
+    scanner = StorageScanner(
+        path_policy=ProtectedPathPolicy(protected_roots=()),
+        clock=lambda: FIXED_NOW,
+        disk_usage=lambda _path: DiskUsage(
+            total=100_000_000,
+            used=60_000_000,
+            free=40_000_000,
+        ),
+        volume_information=lambda _drive: ("Fictional Test", "NTFS"),
+        development_inspector_factory=inspector_factory,
+    )
+
+    report = scanner.scan([root])
+
+    validate_storage_report(report)
+    cache_location = next(
+        location
+        for location in report["development_insights"]["locations"]
+        if location["kind"] == "package_cache"
+    )
+    assert report["candidates"] == []
+    assert cache_location["suggested_command"] == "python -m pip cache purge"
+    assert cache_location["bytes_observed"] == wheel.stat().st_size
 
 
 def test_validated_report_is_written_as_utf8_and_not_overwritten(

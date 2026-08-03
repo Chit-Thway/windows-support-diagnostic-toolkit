@@ -6,6 +6,8 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator
 
+from storage.contract import StorageReportValidationError, validate_storage_report
+
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 FIXTURES_DIRECTORY = Path(__file__).resolve().parent / "fixtures"
 
@@ -323,3 +325,41 @@ def test_last_access_is_never_classification_evidence(
             evidence["code"] != "last_access_before_cutoff"
             for evidence in candidate["evidence"]
         )
+
+
+def test_public_sample_development_insights_are_informational_and_fictional() -> None:
+    sample = read_json(
+        REPOSITORY_ROOT / "sample_data" / "sample-storage-report.json"
+    )
+    insights = sample["development_insights"]
+
+    assert insights["locations"]
+    assert all(
+        location["automatic_cleanup_candidate"] is False
+        for location in insights["locations"]
+    )
+    assert any(
+        location["suggested_command"] == "python -m pip cache purge"
+        for location in insights["locations"]
+    )
+    assert "fictional" in json.dumps(insights).lower()
+
+
+def test_candidate_inside_informational_development_location_is_rejected() -> None:
+    sample = read_json(
+        REPOSITORY_ROOT / "sample_data" / "sample-storage-report.json"
+    )
+    candidate = sample["candidates"][0]
+    location = sample["development_insights"]["locations"][2]
+    location["path"] = candidate["scan_root"]
+    location["within_scan_scope"] = True
+    location["files_observed"] = 1
+    location["bytes_observed"] = candidate["size_bytes"]
+    location["measurement"] = "observed_selected_roots"
+    location["coverage"] = "complete"
+
+    with pytest.raises(
+        StorageReportValidationError,
+        match="cannot contain cleanup candidates",
+    ):
+        validate_storage_report(sample)
