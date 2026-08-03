@@ -80,3 +80,24 @@ def test_requested_root_is_displayed_when_canonical_path_is_unavailable() -> Non
     assert view["roots"][0]["display_path"] == report["scan_scope"]["roots"][0][
         "requested_path"
     ]
+
+
+def test_development_insights_group_informational_locations() -> None:
+    report = json.loads(
+        (REPOSITORY_ROOT / "sample_data" / "sample-storage-report.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    view = present_storage_report(report, diagnostic_status="Healthy")
+
+    assert view["development"]["status_label"] == "Complete"
+    assert len(view["development"]["python_locations"]) == 2
+    assert len(view["development"]["java_locations"]) == 1
+    pip_cache = next(
+        location
+        for location in view["development"]["locations"]
+        if location["kind"] == "package_cache"
+    )
+    assert pip_cache["size_display"] == "Unavailable"
+    assert pip_cache["scope_label"].endswith("not measured")

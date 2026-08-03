@@ -11,6 +11,8 @@ from typing import Any
 from jsonschema import Draft202012Validator, FormatChecker
 from jsonschema.exceptions import SchemaError
 
+from .path_policy import is_path_within
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SCHEMA_PATH = PROJECT_ROOT / "schema" / "storage-report.schema.json"
 SUPPORTED_SCHEMA_VERSION = "1.0.0"
@@ -186,6 +188,55 @@ def _validate_semantics(report: dict[str, Any]) -> None:
             ]:
                 raise StorageReportValidationError(
                     f"Attribute bytes for {attribute} do not match candidates."
+                )
+
+    development = report.get("development_insights")
+    if development is not None:
+        locations = development["locations"]
+        location_ids = [location["location_id"] for location in locations]
+        if len(location_ids) != len(set(location_ids)):
+            raise StorageReportValidationError(
+                "Development insight location_id values must be unique."
+            )
+        scan_roots = tuple(
+            Path(root["canonical_path"] or root["requested_path"])
+            for root in report["scan_scope"]["roots"]
+        )
+        for location in locations:
+            path = Path(location["path"])
+            actually_within_scope = any(
+                is_path_within(path, root) for root in scan_roots
+            )
+            if location["within_scan_scope"] != actually_within_scope:
+                raise StorageReportValidationError(
+                    "Development location scope does not match the scan roots."
+                )
+            if actually_within_scope:
+                if (
+                    location["measurement"] != "observed_selected_roots"
+                    or location["files_observed"] is None
+                    or location["bytes_observed"] is None
+                    or location["coverage"] == "not_applicable"
+                ):
+                    raise StorageReportValidationError(
+                        "Measured development locations require observed values and coverage."
+                    )
+            elif (
+                location["measurement"] != "not_measured"
+                or location["files_observed"] is not None
+                or location["bytes_observed"] is not None
+                or location["coverage"] != "not_applicable"
+            ):
+                raise StorageReportValidationError(
+                    "Out-of-scope development locations must remain unmeasured."
+                )
+
+            if any(
+                is_path_within(Path(candidate["path"]), path)
+                for candidate in candidates
+            ):
+                raise StorageReportValidationError(
+                    "Informational development locations cannot contain cleanup candidates."
                 )
 
 

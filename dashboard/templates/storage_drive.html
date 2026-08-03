@@ -16,7 +16,7 @@
             <div>
                 <p class="eyebrow">Storage insights · read-only analysis</p>
                 <h1>{{ storage.drive.drive_letter }} storage</h1>
-                <p class="header-copy">Understand capacity, scan coverage, and files that may deserve review. Nothing on this page modifies your files.</p>
+                <p class="header-copy">Understand capacity, scan coverage, and files that may deserve review. Analysis and selection are read-only; recycling requires a separate exact-path review and confirmation.</p>
             </div>
             <dl class="report-meta">
                 <div><dt>Analysis created</dt><dd><time class="js-local-time" datetime="{{ storage.generated_at_utc }}">{{ storage.generated_at_utc }}</time></dd></div>
@@ -117,6 +117,58 @@
             </div>
         </section>
 
+        <section aria-labelledby="development-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Informational only</p>
+                    <h2 id="development-heading">Development storage insights</h2>
+                </div>
+                <span class="status-badge status-{{ storage.development.status_class }}">{{ storage.development.status_label }}</span>
+            </div>
+            <p class="support-note development-intro">Python environments, package caches, and Java runtimes are shown separately from cleanup candidates. Nothing is called abandoned merely because it is old.</p>
+
+            {% if storage.development.locations %}
+                <div class="development-grid">
+                    {% for location in storage.development.locations %}
+                        <article class="panel development-card">
+                            <div class="card-heading">
+                                <div>
+                                    <p class="eyebrow">{{ location.ecosystem_label }} · {{ location.kind_label }}</p>
+                                    <h3>{{ location.display_name }}</h3>
+                                </div>
+                                {% if location.active is true %}<span class="status-badge status-healthy">Active</span>{% else %}<span class="status-badge status-unavailable">Informational</span>{% endif %}
+                            </div>
+                            <p class="path-value">{{ location.path }}</p>
+                            <dl class="development-values">
+                                <div><dt>Observed size</dt><dd>{{ location.size_display }}</dd></div>
+                                <div><dt>Files observed</dt><dd>{{ location.files_display }}</dd></div>
+                                <div><dt>Scope</dt><dd>{{ location.scope_label }}</dd></div>
+                                <div><dt>Discovery</dt><dd>{{ location.source_label }}</dd></div>
+                                <div><dt>State</dt><dd>{{ location.active_label }}</dd></div>
+                                <div><dt>Automatic cleanup</dt><dd>Never</dd></div>
+                            </dl>
+                            <p>{{ location.explanation }}</p>
+                            {% if location.suggested_command %}
+                                <div class="guidance-command"><strong>Supported manual command</strong><code>{{ location.suggested_command }}</code></div>
+                            {% endif %}
+                            <p class="support-note"><strong>Consequence:</strong> {{ location.consequence }}</p>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="panel empty-state"><h3>No supported development locations detected</h3><p>The scan remains valid. Python, pip, or Java may be unavailable, outside the selected scope, or discovery may have been disabled.</p></div>
+            {% endif %}
+
+            {% if storage.development.errors %}
+                <div class="development-errors">
+                    {% for error in storage.development.errors %}
+                        <p class="panel safety-note"><strong>{{ error.ecosystem | title }} discovery unavailable:</strong> {{ error.message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <details class="panel development-limitations"><summary>Development-insight limitations</summary><ul>{% for limitation in storage.development.limitations %}<li>{{ limitation }}</li>{% endfor %}</ul></details>
+        </section>
+
         <section aria-labelledby="candidates-heading">
             <div class="section-heading">
                 <div>
@@ -198,6 +250,12 @@
                     <button type="button" class="secondary-button" data-select-visible>Select all visible</button>
                     <button type="button" class="secondary-button" data-clear-selection disabled>Clear selection</button>
                     <button type="button" class="primary-button" data-export-selection disabled>Export cleanup plan</button>
+                    <button type="button"
+                            class="danger-button"
+                            data-review-cleanup
+                            data-preview-url="{{ url_for('storage_cleanup_preview', drive=storage.drive.drive_letter) }}"
+                            data-action-token="{{ storage_action_token }}"
+                            disabled>Review Recycle Bin action</button>
                 </div>
             </div>
 
@@ -281,7 +339,7 @@
                 <button type="button" class="secondary-button" data-page-next disabled>Next</button>
             </nav>
 
-            <p class="milestone-note">Selection creates a local review list only. No file is deleted, moved, repaired, or uploaded in this milestone.</p>
+            <p class="milestone-note">Selection and filtering do not change files. A Recycle Bin action starts only after a separate exact-path review and explicit confirmation.</p>
         </section>
 
         <section aria-labelledby="scope-heading">
@@ -316,6 +374,6 @@
         </section>
     </main>
 
-    <footer class="site-footer"><div class="shell"><p><strong>Local and read-only:</strong> no report data is uploaded, and viewing this page cannot modify or remove files.</p></div></footer>
+    <footer class="site-footer"><div class="shell"><p><strong>Local and user-controlled:</strong> no report data is uploaded, and viewing this page cannot modify or remove files.</p></div></footer>
 </body>
 </html>

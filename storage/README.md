@@ -95,11 +95,18 @@ limitations. Its candidate explorer supports:
 - individual selection and `Select all visible` for the current page;
 - unique selected-byte totals that do not double-count overlapping attributes;
 - copying a path, opening an eligible containing folder, and exporting a local
-  review-only cleanup plan.
+  review-only cleanup plan;
+- opening an exact-path cleanup preview for explicitly selected eligible files.
 
-The page does not start scans, delete files, move files, or perform repairs.
-Selections remain a review list only. Exported review plans contain real local
-paths and are ignored by Git through `storage-cleanup-review*.json`.
+The page does not start scans or perform repairs. Opening a preview does not
+change files. A separate, explicit POST confirmation can move revalidated
+regular files to the Windows Recycle Bin only. There is no permanent-delete
+fallback and no directory action. Exported review plans contain real local
+paths and are ignored by Git through `storage-cleanup-review*.json`; cleanup
+results stay under ignored `cleanup-records/`.
+
+The guided-cleanup workflow, checks, results, and limitations are documented in
+[`docs/guided-cleanup.md`](../docs/guided-cleanup.md).
 
 You can set the storage path for the current PowerShell session instead:
 
@@ -135,11 +142,31 @@ python -m storage `
 `Stale`, `Likely incomplete`, `Large`, `Empty`, and `Temporary` are review
 attributes. None means that a file is unused, corrupted, or safe to remove.
 
-## Explicit development-cache roots
+## Development-storage insights
 
-Milestone 2 does not guess development-cache locations. A cache is classified
-only when its folder is explicitly supplied and is already inside an approved
-scan root:
+The scanner now recognises Python virtual environments from `pyvenv.cfg`
+metadata, queries pip's supported cache-location command, and reads supported
+Java runtime properties when Java is available. Environment and runtime files
+are informational and never become automatic cleanup candidates. Locations
+outside selected scan roots are displayed without recursively measuring them.
+
+See
+[`docs/development-storage-insights.md`](../docs/development-storage-insights.md)
+for the discovery rules, consequences, and manual testing workflow.
+
+Disable this discovery explicitly when it is not wanted:
+
+```powershell
+python -m storage `
+  --root "$env:USERPROFILE\Downloads" `
+  --no-development-insights
+```
+
+### Explicit custom cache roots
+
+For a cache not supported by automatic discovery, classification still applies
+only when its folder is explicitly supplied and already inside an approved scan
+root:
 
 ```powershell
 python -m storage `
@@ -147,7 +174,7 @@ python -m storage `
   --development-cache-root "C:\FictionalDevelopment\pip-cache"
 ```
 
-Supported pip and Java discovery is deferred to Milestone 6.
+The scanner does not infer cleanup commands for custom cache roots.
 
 ## Progress and cancellation
 

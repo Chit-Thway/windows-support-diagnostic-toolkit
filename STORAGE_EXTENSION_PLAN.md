@@ -35,9 +35,7 @@ Planned branch: `storage-extension-m2-read-only-scanner`
 
 ### Milestone 3 — Per-drive dashboard
 
-Status: Implemented and validated locally on
-`storage-extension-m3-drive-dashboard` together with Milestone 4; awaiting
-review and merge into `storage-extension`.
+Status: Complete and merged into `storage-extension` together with Milestone 4.
 
 Make disk cards interactive and add an accessible per-drive page with capacity
 information, a non-overlapping storage chart, scan completeness, and cleanup
@@ -47,9 +45,7 @@ Planned branch: `storage-extension-m3-drive-dashboard`
 
 ### Milestone 4 — Candidate explorer
 
-Status: Implemented and validated locally on
-`storage-extension-m3-drive-dashboard` at the user's request; awaiting review
-and merge into `storage-extension`.
+Status: Complete and merged into `storage-extension` together with Milestone 3.
 
 Add sortable file results, evidence and confidence labels, `Match all` and
 `Match any` filters, individual checkboxes, and a safe `Select all visible`
@@ -62,6 +58,10 @@ was committed or pushed.
 
 ### Milestone 5 — Guided Recycle Bin cleanup
 
+Status: Implemented and validated locally on
+`storage-extension-m5-guided-cleanup`; awaiting review and merge into
+`storage-extension`.
+
 After the read-only results are trusted, add an exact-path review screen,
 explicit confirmation, immediate file revalidation, protected-path enforcement,
 and per-file results. Files will move only to the Windows Recycle Bin; failure
@@ -71,11 +71,16 @@ Planned branch: `storage-extension-m5-guided-cleanup`
 
 ### Milestone 6 — Development-storage insights
 
+Status: Implemented on the combined `storage-extension-m5-guided-cleanup`
+branch at the user's request; validated locally and ready for manual testing.
+
 Explain storage used by supported Python environments, pip caches, and selected
 Java locations. Runtimes remain informational, while supported cache cleanup is
 presented with clear consequences.
 
-Planned branch: `storage-extension-m6-development-insights`
+Original planned branch: `storage-extension-m6-development-insights`. This
+milestone was intentionally combined with the uncommitted Milestone 5 branch
+before the user performs both manual tests and pushes the work.
 
 ### Milestone 7 — Hardening and portfolio release
 

@@ -7,9 +7,15 @@ from pathlib import Path
 from typing import Any
 
 from flask import Flask, Response, jsonify, render_template, request
+from storage.cleanup import (
+    DEFAULT_CLEANUP_RECORD_DIRECTORY,
+    send_to_recycle_bin,
+)
 
+from .cleanup_tokens import CleanupPreviewStore
 from .evaluator import evaluate_report
 from .report_loader import ReportLoadError, load_report, resolve_report_path
+from .storage_cleanup import register_storage_cleanup_routes
 from .storage_actions import (
     StorageActionError,
     open_containing_folder,
@@ -44,6 +50,9 @@ def create_app(
         ),
         STORAGE_ACTION_TOKEN=secrets.token_urlsafe(32),
         OPEN_STORAGE_FOLDER_HANDLER=open_containing_folder,
+        CLEANUP_PREVIEW_STORE=CleanupPreviewStore(),
+        CLEANUP_RECORD_DIRECTORY=DEFAULT_CLEANUP_RECORD_DIRECTORY,
+        RECYCLE_HANDLER=send_to_recycle_bin,
     )
     if test_config:
         app.config.update(test_config)
@@ -237,5 +246,7 @@ def create_app(
             ok=True,
             message="The containing folder was opened in Windows.",
         )
+
+    register_storage_cleanup_routes(app)
 
     return app

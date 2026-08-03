@@ -18,6 +18,7 @@
     const selectVisibleButton = explorer.querySelector("[data-select-visible]");
     const clearSelectionButton = explorer.querySelector("[data-clear-selection]");
     const exportButton = explorer.querySelector("[data-export-selection]");
+    const reviewCleanupButton = explorer.querySelector("[data-review-cleanup]");
     const previousButton = explorer.querySelector("[data-page-previous]");
     const nextButton = explorer.querySelector("[data-page-next]");
     const pageStatus = explorer.querySelector("[data-page-status]");
@@ -165,6 +166,7 @@
         visibleSelection.textContent = `${visibleSelected} visible on this page`;
         clearSelectionButton.disabled = selectedIds.size === 0;
         exportButton.disabled = selectedIds.size === 0;
+        reviewCleanupButton.disabled = selectedIds.size === 0;
         selectVisibleButton.disabled = !visibleRows.some(
             (row) => !row.querySelector("[data-candidate-select]").disabled
         );
@@ -335,6 +337,37 @@
         download.remove();
         URL.revokeObjectURL(url);
         setFeedback("Exported a local review-only cleanup plan. No files were changed.");
+    });
+
+    reviewCleanupButton.addEventListener("click", () => {
+        if (selectedIds.size === 0) {
+            return;
+        }
+        const previewForm = document.createElement("form");
+        previewForm.method = "post";
+        previewForm.action = reviewCleanupButton.dataset.previewUrl;
+
+        const actionToken = document.createElement("input");
+        actionToken.type = "hidden";
+        actionToken.name = "action_token";
+        actionToken.value = reviewCleanupButton.dataset.actionToken;
+        previewForm.append(actionToken);
+
+        rows
+            .filter((row) => selectedIds.has(row.dataset.candidateId))
+            .sort((left, right) =>
+                left.dataset.pathSort.localeCompare(right.dataset.pathSort)
+            )
+            .forEach((row) => {
+                const candidateId = document.createElement("input");
+                candidateId.type = "hidden";
+                candidateId.name = "candidate_id";
+                candidateId.value = row.dataset.candidateId;
+                previewForm.append(candidateId);
+            });
+
+        document.body.append(previewForm);
+        previewForm.submit();
     });
 
     applyFilters();

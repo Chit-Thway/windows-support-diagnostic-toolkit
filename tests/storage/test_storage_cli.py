@@ -58,3 +58,15 @@ def test_non_json_output_is_rejected(
 
     with pytest.raises(ScanConfigurationError, match="must end in .json"):
         storage_cli.resolve_output_path("report.txt")
+
+
+def test_development_discovery_is_enabled_by_default_and_can_be_disabled() -> None:
+    parser = storage_cli.build_parser()
+
+    default = parser.parse_args(["--root", r"C:\FictionalRoot"])
+    disabled = parser.parse_args(
+        ["--root", r"C:\FictionalRoot", "--no-development-insights"]
+    )
+
+    assert default.no_development_insights is False
+    assert disabled.no_development_insights is True

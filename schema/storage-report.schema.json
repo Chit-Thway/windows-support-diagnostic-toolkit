@@ -232,6 +232,9 @@
             },
             "use_last_access_as_classification_evidence": {
               "const": false
+            },
+            "discover_development_insights": {
+              "type": "boolean"
             }
           }
         }
@@ -382,6 +385,9 @@
         "$ref": "#/$defs/scanError"
       }
     },
+    "development_insights": {
+      "$ref": "#/$defs/developmentInsights"
+    },
     "limitations": {
       "type": "array",
       "maxItems": 50,
@@ -469,6 +475,150 @@
       "minLength": 3,
       "maxLength": 32767,
       "pattern": "^[^\\r\\n]+$"
+    },
+    "developmentInsights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "locations", "errors", "limitations"],
+      "properties": {
+        "status": {
+          "enum": ["complete", "partial", "unavailable"]
+        },
+        "locations": {
+          "type": "array",
+          "maxItems": 500,
+          "items": {
+            "$ref": "#/$defs/developmentLocation"
+          }
+        },
+        "errors": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/developmentError"
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      }
+    },
+    "developmentLocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "location_id",
+        "ecosystem",
+        "kind",
+        "path",
+        "source",
+        "display_name",
+        "version",
+        "active",
+        "within_scan_scope",
+        "files_observed",
+        "bytes_observed",
+        "measurement",
+        "coverage",
+        "cleanup_policy",
+        "suggested_command",
+        "automatic_cleanup_candidate",
+        "explanation",
+        "consequence"
+      ],
+      "properties": {
+        "location_id": {
+          "type": "string",
+          "pattern": "^development-[0-9]{3}$"
+        },
+        "ecosystem": {
+          "enum": ["python", "java"]
+        },
+        "kind": {
+          "enum": ["virtual_environment", "package_cache", "runtime_or_sdk"]
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "source": {
+          "enum": ["pyvenv_cfg", "pip_cache_dir", "java_system_properties", "java_home"]
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "version": {
+          "type": ["string", "null"],
+          "maxLength": 100
+        },
+        "active": {
+          "type": ["boolean", "null"]
+        },
+        "within_scan_scope": {
+          "type": "boolean"
+        },
+        "files_observed": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "bytes_observed": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "measurement": {
+          "enum": ["observed_selected_roots", "not_measured"]
+        },
+        "coverage": {
+          "enum": ["complete", "partial", "not_applicable"]
+        },
+        "cleanup_policy": {
+          "enum": ["informational_only", "supported_command_only"]
+        },
+        "suggested_command": {
+          "type": ["string", "null"],
+          "maxLength": 500
+        },
+        "automatic_cleanup_candidate": {
+          "const": false
+        },
+        "explanation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "consequence": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      }
+    },
+    "developmentError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ecosystem", "code", "message"],
+      "properties": {
+        "ecosystem": {
+          "enum": ["python", "java"]
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$",
+          "maxLength": 100
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      }
     },
     "scanRoot": {
       "type": "object",

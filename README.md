@@ -121,9 +121,17 @@ shows a non-overlapping capacity chart, scan completeness, inaccessible paths,
 candidate totals, and a read-only candidate explorer. Candidates can be
 filtered with explicit `Match all` or `Match any` behavior, sorted, selected,
 copied, opened in their containing folder, or exported as a local review plan.
-No candidate action deletes or moves a file. If a custom diagnostic report has
-no selected storage analysis, the page explains how to create one instead of
-starting a scan silently.
+An explicit **Review Recycle Bin action** opens a final exact-path preview.
+Only a separately confirmed POST action can move eligible regular files to the
+Windows Recycle Bin. If a custom diagnostic report has no selected storage
+analysis, the page explains how to create one instead of starting a scan
+silently.
+
+Guided cleanup never permanently deletes a file as a fallback, never processes
+directories, and checks every selected file again immediately before the
+Recycle Bin call. Large selections require an additional typed phrase. Per-file
+outcomes are stored only under ignored `cleanup-records/`. See
+[`docs/guided-cleanup.md`](docs/guided-cleanup.md) for the full safety model.
 
 Alternatively, select a report through an environment variable:
 
@@ -242,9 +250,12 @@ Milestone 3 connects disk cards to an accessible per-drive dashboard with a
 non-overlapping storage chart and scan completeness. Milestone 4 adds a
 read-only candidate explorer with deterministic filtering, sorting,
 visible-only selection, copy-path, open-folder, and local review-plan export.
-It does not provide cleanup actions. See
+Milestone 5 adds a guarded exact-path review and Recycle Bin-only confirmation
+with per-file revalidation and results. Milestone 6 adds informational Python
+environment, supported pip-cache, and Java runtime insights without making
+runtimes automatic cleanup candidates. See
 [`docs/storage-report-contract.md`](docs/storage-report-contract.md) and
-[`storage/README.md`](storage/README.md).
+[`docs/development-storage-insights.md`](docs/development-storage-insights.md).
 
 Real scans are written only to ignored `storage-reports/`.
 
@@ -262,6 +273,12 @@ python -m dashboard `
   --storage-report '.\storage-reports\YOUR-STORAGE-REPORT.json'
 ```
 
+Development discovery is enabled for storage scans by default. It recognises
+`pyvenv.cfg` markers without reading their contents, queries pip's supported
+cache-location command, and reads supported Java runtime properties when Java
+is available. Only selected scan roots are measured. The dashboard never runs
+cache cleanup commands automatically.
+
 ## Project structure
 
 ```text
@@ -270,13 +287,14 @@ dashboard/             Local Flask application, templates, and static files
 docs/                  Public diagnostic and storage-contract documentation
 sample_data/           Trackable fictional diagnostic and storage reports
 schema/                Independent diagnostic and storage JSON Schemas
-storage/               Read-only storage scanner, classifier, and safety rules
+storage/               Storage scanner, classifier, and guarded cleanup rules
 tests/dashboard/       Dashboard tests
 tests/fixtures/        Trackable fictional contract fixtures
 tests/storage/         Storage contract tests and fictional fixtures
 tests/*.ps1            Collector and contract tests
 reports/               Ignored local reports
 storage-reports/       Ignored local storage-analysis reports
+cleanup-records/       Ignored local per-file cleanup result records
 ```
 
 ## Current limitations
@@ -286,8 +304,12 @@ storage-reports/       Ignored local storage-analysis reports
   are rejected.
 - One diagnostic report and one optional storage report are selected when the
   server starts; switch reports by stopping and restarting the server.
-- Candidate selection is a review list only. Moving files to the Recycle Bin
-  is deliberately unavailable until the separately reviewed cleanup milestone.
+- Guided cleanup supports eligible regular files only. It does not process
+  directories, request elevation, empty the Recycle Bin, or permanently delete.
+- Recycle Bin recovery is controlled by Windows and is not guaranteed
+  indefinitely.
+- Development locations outside selected roots are displayed but not measured;
+  no universal Java cache is assumed.
 - `Open folder` is available only for eligible retained candidates whose
   containing directory still exists and passes the current path checks.
 - Statuses use documented deterministic thresholds and are not AI diagnoses.
