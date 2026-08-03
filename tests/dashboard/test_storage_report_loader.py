@@ -13,6 +13,7 @@ from dashboard.storage_report_loader import (
     UnsupportedStorageSchemaVersionError,
     load_storage_report,
     resolve_storage_report_path,
+    resolve_storage_report_paths,
 )
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -48,6 +49,20 @@ def test_storage_report_environment_path_is_supported(tmp_path: Path) -> None:
     )
 
     assert resolved == (tmp_path / "environment.json").resolve()
+
+
+def test_multiple_storage_report_paths_are_resolved(tmp_path: Path) -> None:
+    resolved = resolve_storage_report_paths(
+        ["c-report.json", "f-report.json"],
+        environment={},
+        current_directory=tmp_path,
+        diagnostic_report_path="custom-diagnostic.json",
+    )
+
+    assert resolved == (
+        (tmp_path / "c-report.json").resolve(),
+        (tmp_path / "f-report.json").resolve(),
+    )
 
 
 def test_valid_storage_report_loads() -> None:

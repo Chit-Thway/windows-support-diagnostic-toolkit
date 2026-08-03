@@ -116,6 +116,16 @@ python -m dashboard `
   --storage-report '.\storage-reports\YOUR-STORAGE-REPORT.json'
 ```
 
+Repeat `--storage-report` to keep independent C: and F: analyses available in
+the same dashboard session:
+
+```powershell
+python -m dashboard `
+  --report '.\reports\first-report.json' `
+  --storage-report '.\storage-reports\c-drive-report.json' `
+  --storage-report '.\storage-reports\f-drive-report.json'
+```
+
 Each disk card is an accessible link to its per-drive storage page. The page
 shows a non-overlapping capacity chart, scan completeness, inaccessible paths,
 candidate totals, and a read-only candidate explorer. Candidates can be
@@ -265,12 +275,26 @@ Run the scanner explicitly from PowerShell:
 python -m storage --root "$env:USERPROFILE\Downloads"
 ```
 
+To analyse all accessible, non-protected folders from an actual drive root,
+run one explicit scan per drive:
+
+```powershell
+python -m storage --root 'C:\' --output 'c-drive-report.json'
+python -m storage --root 'F:\' --output 'f-drive-report.json'
+```
+
+Drive-root scans may take much longer and may finish as partial when Windows
+denies access. Protected operating-system, application, recovery, Recycle Bin,
+reparse-point, and unreadable locations are reported or skipped and are never
+offered as cleanup candidates.
+
 Then display the generated report alongside a diagnostic report:
 
 ```powershell
 python -m dashboard `
   --report '.\reports\first-report.json' `
-  --storage-report '.\storage-reports\YOUR-STORAGE-REPORT.json'
+  --storage-report '.\storage-reports\c-drive-report.json' `
+  --storage-report '.\storage-reports\f-drive-report.json'
 ```
 
 Development discovery is enabled for storage scans by default. It recognises
@@ -302,16 +326,16 @@ cleanup-records/       Ignored local per-file cleanup result records
 - The dashboard supports report schema version `1.0.0` only.
 - Diagnostic reports larger than 5 MiB and storage reports larger than 50 MiB
   are rejected.
-- One diagnostic report and one optional storage report are selected when the
-  server starts; switch reports by stopping and restarting the server.
+- One diagnostic report and multiple independent per-drive storage reports can
+  be selected when the server starts.
 - Guided cleanup supports eligible regular files only. It does not process
   directories, request elevation, empty the Recycle Bin, or permanently delete.
 - Recycle Bin recovery is controlled by Windows and is not guaranteed
   indefinitely.
 - Development locations outside selected roots are displayed but not measured;
   no universal Java cache is assumed.
-- `Open folder` is available only for eligible retained candidates whose
-  containing directory still exists and passes the current path checks.
+- `Open folder` is available for eligible and review-only regular candidates
+  whose containing directory still exists and passes current path checks.
 - Statuses use documented deterministic thresholds and are not AI diagnoses.
 - The Flask development server is intended only for local use.
 - There is no report history, database, authentication, remote access,

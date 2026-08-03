@@ -34,6 +34,7 @@ def make_scanner() -> StorageScanner:
             free=40_000_000,
         ),
         volume_information=lambda _drive: ("Fictional Test", "NTFS"),
+        allocated_size=lambda _path, logical_size: logical_size,
     )
 
 
@@ -185,6 +186,37 @@ class MissingEntry:
         raise FileNotFoundError(self.path)
 
 
+class DeniedEntry:
+    def __init__(self, path: Path) -> None:
+        self.path = str(path)
+        self.name = path.name
+
+    def stat(self, *, follow_symlinks: bool):
+        assert follow_symlinks is False
+        raise PermissionError(self.path)
+
+
+class RegularMetadataEntry:
+    def __init__(self, path: Path, *, inode: int = 1) -> None:
+        self.path = str(path)
+        self.name = path.name
+        self._inode = inode
+
+    def stat(self, *, follow_symlinks: bool):
+        assert follow_symlinks is False
+        timestamp = FIXED_NOW.timestamp()
+        return SimpleNamespace(
+            st_mode=stat.S_IFREG,
+            st_size=5,
+            st_ctime=timestamp,
+            st_mtime=timestamp,
+            st_atime=timestamp,
+            st_ino=self._inode,
+            st_dev=1,
+            st_file_attributes=0,
+        )
+
+
 class ReparseEntry:
     def __init__(self, path: Path) -> None:
         self.path = str(path)
@@ -219,6 +251,257 @@ def test_disappearing_file_is_recorded_and_scan_continues(
     assert report["candidates"][0]["protection"]["eligibility"] == (
         "unavailable"
     )
+
+
+def test_access_denied_is_bounded_and_remaining_scan_stays_useful(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "Downloads"
+    root.mkdir()
+    denied = [DeniedEntry(root / f"locked-{index}.tmp") for index in range(5)]
+    monkeypatch.setattr(
+        "storage.scanner.os.scandir",
+        lambda _directory: FakeScandir(denied),
+    )
+
+    report = make_scanner().scan(
+        [root],
+        options=ScannerOptions(
+            maximum_issue_records=2,
+            discover_development_insights=False,
+        ),
+    )
+
+    validate_storage_report(report)
+    assert report["scan"]["status"] == "partial"
+    assert len(report["inaccessible_paths"]) == 2
+    assert len(report["scan_errors"]) == 2
+    assert report["scan"]["inaccessible_path_details_omitted"] == 3
+    assert report["scan"]["scan_error_details_omitted"] == 3
+    assert report["candidate_summary"]["total_unique_candidates"] == 5
+    assert all(
+        item["error_type"] == "access_denied"
+        for item in report["inaccessible_paths"]
+    )
+    assert any("additional inaccessible-path" in item for item in report["limitations"])
+
+
+def test_content_lock_does_not_block_metadata_only_scan(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "Downloads"
+    root.mkdir()
+    locked = root / "content-locked.bin"
+    locked.write_bytes(b"metadata remains available")
+
+    def reject_content_open(*_args, **_kwargs):
+        raise PermissionError("simulated content lock")
+
+    monkeypatch.setattr(Path, "open", reject_content_open)
+
+    report = make_scanner().scan(
+        [root],
+        options=ScannerOptions(discover_development_insights=False),
+    )
+
+    assert report["scan"]["status"] == "complete"
+    assert report["scan"]["files_examined"] == 1
+    assert report["scan"]["bytes_examined"] == len(b"metadata remains available")
+
+
+def test_long_metadata_path_is_recorded_without_content_access(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "Downloads"
+    root.mkdir()
+    long_path = root / (("fictional-segment-" * 20) + ".bin")
+    monkeypatch.setattr(
+        "storage.scanner.os.scandir",
+        lambda _directory: FakeScandir([RegularMetadataEntry(long_path)]),
+    )
+
+    report = make_scanner().scan(
+        [root],
+        options=ScannerOptions(discover_development_insights=False),
+    )
+
+    validate_storage_report(report)
+    assert report["scan"]["status"] == "complete"
+    assert report["scan"]["files_examined"] == 1
+
+
+def test_large_candidate_set_keeps_aggregate_totals_when_details_are_bounded(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "Downloads"
+    root.mkdir()
+    for index in range(250):
+        (root / f"empty-{index:03d}.tmp").touch()
+
+    report = make_scanner().scan(
+        [root],
+        options=ScannerOptions(
+            maximum_candidates_retained=25,
+            discover_development_insights=False,
+        ),
+    )
+
+    validate_storage_report(report)
+    assert report["scan"]["detail_coverage"] == "bounded"
+    assert report["candidate_summary"]["total_unique_candidates"] == 250
+    assert report["candidate_summary"]["retained_candidates"] == 25
+    assert report["candidate_summary"]["omitted_candidates"] == 225
+
+
+def test_bounded_candidates_retain_higher_value_records(tmp_path: Path) -> None:
+    root = tmp_path / "Downloads"
+    root.mkdir()
+    stale = root / "a-stale.bin"
+    stale.write_bytes(b"ordinary stale file")
+    incomplete = root / "z-download.part"
+    incomplete.write_bytes(b"partial")
+    old = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    set_modified_time(stale, old)
+    set_modified_time(incomplete, old)
+
+    report = make_scanner().scan(
+        [root],
+        options=ScannerOptions(
+            maximum_candidates_retained=1,
+            discover_development_insights=False,
+        ),
+    )
+
+    validate_storage_report(report)
+    assert report["candidate_summary"]["total_unique_candidates"] == 2
+    assert report["candidates"][0]["name"] == "z-download.part"
+    assert report["candidates"][0]["removal_risk"] == "low"
+
+
+def test_installer_candidate_is_high_risk_and_review_only(tmp_path: Path) -> None:
+    root = tmp_path / "Downloads"
+    root.mkdir()
+    installer = root / "Zoom.msi"
+    installer.write_bytes(b"fictional installer")
+    set_modified_time(installer, datetime(2020, 1, 1, tzinfo=timezone.utc))
+
+    report = make_scanner().scan(
+        [root],
+        options=ScannerOptions(discover_development_insights=False),
+    )
+
+    validate_storage_report(report)
+    candidate = report["candidates"][0]
+    assert candidate["removal_risk"] == "high"
+    assert candidate["protection"]["eligibility"] == "review_only"
+    assert candidate["protection"]["reason_code"] == "application_or_installer_file"
+
+
+def test_protected_files_contribute_to_accounting_but_not_candidates(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "DriveRoot"
+    protected = root / "Windows"
+    protected.mkdir(parents=True)
+    system_file = protected / "system.bin"
+    system_file.write_bytes(b"protected bytes")
+    set_modified_time(system_file, datetime(2020, 1, 1, tzinfo=timezone.utc))
+    scanner = StorageScanner(
+        path_policy=ProtectedPathPolicy(protected_roots=(protected,)),
+        clock=lambda: FIXED_NOW,
+        disk_usage=lambda _path: DiskUsage(
+            total=100_000_000,
+            used=60_000_000,
+            free=40_000_000,
+        ),
+        volume_information=lambda _drive: ("Fictional Test", "NTFS"),
+        allocated_size=lambda _path, logical_size: logical_size,
+    )
+
+    report = scanner.scan(
+        [root],
+        options=ScannerOptions(discover_development_insights=False),
+    )
+
+    validate_storage_report(report)
+    assert report["candidates"] == []
+    assert report["accounting"]["categories"]["protected_system"]["bytes"] == len(
+        b"protected bytes"
+    )
+
+
+def test_allocated_sizes_drive_accounting_instead_of_logical_sizes(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "DriveRoot"
+    root.mkdir()
+    sparse_like = root / "fictional-sparse.bin"
+    sparse_like.write_bytes(b"logical payload")
+    scanner = StorageScanner(
+        path_policy=ProtectedPathPolicy(protected_roots=()),
+        clock=lambda: FIXED_NOW,
+        disk_usage=lambda _path: DiskUsage(total=1000, used=600, free=400),
+        volume_information=lambda _drive: ("Fictional Test", "NTFS"),
+        allocated_size=lambda _path, _logical_size: 100,
+    )
+
+    report = scanner.scan(
+        [root],
+        options=ScannerOptions(discover_development_insights=False),
+    )
+
+    validate_storage_report(report)
+    assert report["scan"]["bytes_examined"] == len(b"logical payload")
+    assert report["scan"]["allocated_bytes_examined"] == 100
+    assert report["accounting"]["categories"]["user_content"]["bytes"] == 100
+    assert report["accounting"]["categories"]["other_or_unreadable"]["bytes"] == 500
+
+
+def test_hard_linked_file_is_counted_once_when_identity_is_available(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "Downloads"
+    root.mkdir()
+    original = root / "original.bin"
+    linked = root / "linked.bin"
+    original.write_bytes(b"one physical file")
+    try:
+        os.link(original, linked)
+    except OSError:
+        pytest.skip("Hard links are unavailable on this test volume.")
+    report = make_scanner().scan(
+        [root],
+        options=ScannerOptions(discover_development_insights=False),
+    )
+
+    validate_storage_report(report)
+    assert report["scan"]["files_examined"] == 1
+    assert report["scan"]["bytes_examined"] == len(b"one physical file")
+
+
+def test_cancellation_before_first_root_marks_every_root_skipped(
+    tmp_path: Path,
+) -> None:
+    first = tmp_path / "First"
+    second = tmp_path / "Second"
+    first.mkdir()
+    second.mkdir()
+
+    report = make_scanner().scan(
+        [first, second],
+        options=ScannerOptions(discover_development_insights=False),
+        cancel_check=lambda: True,
+    )
+
+    validate_storage_report(report)
+    assert report["scan"]["status"] == "cancelled"
+    assert [root["status"] for root in report["scan_scope"]["roots"]] == [
+        "skipped",
+        "skipped",
+    ]
 
 
 def test_reparse_point_is_not_followed_and_is_protected(

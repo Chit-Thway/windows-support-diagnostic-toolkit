@@ -41,8 +41,8 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         required=True,
         help=(
-            "Directory to scan. Repeat --root for additional folders on the "
-            "same drive."
+            "Directory or explicit drive root to scan. Repeat --root for "
+            "additional non-overlapping folders on the same drive."
         ),
     )
     parser.add_argument(
@@ -70,6 +70,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--incomplete-min-hours", type=int, default=24)
     parser.add_argument("--temporary-min-hours", type=int, default=168)
     parser.add_argument("--max-candidates", type=int, default=5000)
+    parser.add_argument(
+        "--max-issue-records",
+        type=int,
+        default=1000,
+        help=(
+            "Maximum retained inaccessible-path and scan-error details. "
+            "Total omitted counts remain in the report."
+        ),
+    )
     parser.add_argument(
         "--no-development-insights",
         action="store_true",
@@ -145,6 +154,7 @@ def main(argv: list[str] | None = None) -> int:
         scanner_options = ScannerOptions(
             classification=classification_options,
             maximum_candidates_retained=arguments.max_candidates,
+            maximum_issue_records=arguments.max_issue_records,
             development_cache_roots=tuple(arguments.development_cache_root),
             discover_development_insights=(
                 not arguments.no_development_insights

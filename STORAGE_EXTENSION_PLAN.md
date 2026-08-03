@@ -58,9 +58,7 @@ was committed or pushed.
 
 ### Milestone 5 — Guided Recycle Bin cleanup
 
-Status: Implemented and validated locally on
-`storage-extension-m5-guided-cleanup`; awaiting review and merge into
-`storage-extension`.
+Status: Complete and merged into `storage-extension` together with Milestone 6.
 
 After the read-only results are trusted, add an exact-path review screen,
 explicit confirmation, immediate file revalidation, protected-path enforcement,
@@ -71,8 +69,7 @@ Planned branch: `storage-extension-m5-guided-cleanup`
 
 ### Milestone 6 — Development-storage insights
 
-Status: Implemented on the combined `storage-extension-m5-guided-cleanup`
-branch at the user's request; validated locally and ready for manual testing.
+Status: Complete and merged into `storage-extension` together with Milestone 5.
 
 Explain storage used by supported Python environments, pip caches, and selected
 Java locations. Runtimes remain informational, while supported cache cleanup is
@@ -84,12 +81,31 @@ before the user performs both manual tests and pushes the work.
 
 ### Milestone 7 — Hardening and portfolio release
 
+Status: Functional hardening implemented and validated locally on
+`storage-extension-m7-hardening`; awaiting manual Windows testing. Portfolio
+screenshots and the standalone case study are intentionally deferred until the
+working release is manually approved.
+
 Test large and partial scans, changing files, links, access denial, locked
 files, cancellation, and cleanup failure paths. Complete public documentation,
 synthetic screenshots, limitations, and a standalone storage-extension case
 study.
 
-Planned branch: `storage-extension-m7-hardening-portfolio`
+Current branch: `storage-extension-m7-hardening`. The portfolio work will use a
+separate follow-up branch after manual testing.
+
+Final usability amendments on this branch:
+
+- permit an explicitly supplied drive root while keeping protected locations
+  and Recycle Bin contents outside cleanup eligibility;
+- load multiple per-drive storage reports in one dashboard session and select
+  the matching report automatically from each disk card.
+- use Windows allocated-size and stable file-identity metadata for physical
+  chart accounting;
+- retain bounded candidates by deterministic review value rather than traversal
+  order;
+- keep application-managed data, installer/application files, databases,
+  configuration files, and likely saves review-only.
 
 ## Safety principles
 

@@ -63,7 +63,7 @@
                     <div><dt>Directories</dt><dd>{{ storage.scan.directories_examined_display }}</dd></div>
                     <div><dt>Bytes examined</dt><dd>{{ storage.scan.bytes_examined_display }}</dd></div>
                     <div><dt>Category coverage</dt><dd>{{ storage.accounting_coverage }}</dd></div>
-                    <div><dt>Inaccessible paths</dt><dd>{{ storage.inaccessible_paths | length }}</dd></div>
+                    <div><dt>Inaccessible paths</dt><dd>{{ storage.scan.inaccessible_paths_total }}</dd></div>
                 </dl>
                 {% if storage.scan.status != "complete" %}
                     <p class="support-note"><strong>This analysis is incomplete.</strong> Review the errors and limitations below before drawing conclusions.</p>
@@ -97,6 +97,7 @@
                         <text class="donut-label" x="21" y="24">free</text>
                     </svg>
                     <figcaption>Every byte appears in one category only. Candidate attributes are deliberately excluded from this chart because they can overlap.</figcaption>
+                    <p class="support-note"><strong>Grey does not mean corrupted.</strong> “Other or unreadable” includes used space outside the folders selected for this scan, as well as space that could not be classified.</p>
                 </figure>
 
                 <div class="category-list" role="list" aria-label="Storage category values">
@@ -166,6 +167,9 @@
                     {% endfor %}
                 </div>
             {% endif %}
+            {% if storage.development.errors_omitted %}
+                <p class="panel safety-note"><strong>Bounded details:</strong> {{ storage.development.errors_omitted }} additional development-discovery error record(s) were omitted. The status remains partial.</p>
+            {% endif %}
             <details class="panel development-limitations"><summary>Development-insight limitations</summary><ul>{% for limitation in storage.development.limitations %}<li>{{ limitation }}</li>{% endfor %}</ul></details>
         </section>
 
@@ -178,8 +182,8 @@
             </div>
             <div class="panel candidate-total">
                 <div><span class="candidate-total-number">{{ storage.candidate_summary.total_unique_candidates }}</span><span>unique candidates</span></div>
-                <div><span class="candidate-total-number">{{ storage.candidate_summary.total_unique_candidate_size }}</span><span>unique candidate size</span></div>
-                <p>Attribute totals overlap. A file with several attributes is counted once in the unique total above.</p>
+                <div><span class="candidate-total-number">{{ storage.candidate_summary.total_unique_candidate_allocated_size }}</span><span>estimated physical candidate space</span></div>
+                <p>Attribute totals use logical sizes and can overlap. Physical candidate space uses allocated-size metadata when available.</p>
             </div>
             <div class="candidate-summary-grid">
                 {% for attribute in storage.candidate_summary.attributes %}
@@ -194,7 +198,7 @@
                 <div class="panel empty-state"><h3>No cleanup candidates reported</h3><p>The selected scan did not identify files matching the configured review rules.</p></div>
             {% endif %}
             {% if storage.candidate_summary.excluded_count %}
-                <p class="panel safety-note"><strong>{{ storage.candidate_summary.excluded_count }} protected or unavailable record(s)</strong> are excluded from cleanup eligibility.</p>
+                <p class="panel safety-note"><strong>{{ storage.candidate_summary.excluded_count }} retained review-only, protected, or unavailable record(s)</strong> are excluded from cleanup eligibility.</p>
             {% endif %}
             {% if storage.candidate_summary.omitted_candidates %}
                 <p class="panel safety-note"><strong>{{ storage.candidate_summary.omitted_candidates }} candidate detail(s) were omitted by the report limit.</strong> Summary totals include them, but only retained rows can be filtered or selected.</p>
@@ -231,11 +235,12 @@
                     <label>Path contains<input type="text" name="path-query" placeholder="Downloads\Archive"></label>
                     <label>Scan root<select name="scan-root"><option value="">All roots</option>{% for root in storage.candidate_root_options %}<option value="{{ root }}">{{ root }}</option>{% endfor %}</select></label>
                     <label>Confidence<select name="confidence"><option value="">Any confidence</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
+                    <label>Removal risk<select name="removal-risk"><option value="">Any risk</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="protected">Protected</option></select></label>
                     <label>Sort by<select name="sort"><option value="largest">Largest first</option><option value="smallest">Smallest first</option><option value="oldest">Oldest modified first</option><option value="newest">Newest modified first</option><option value="path">Path A–Z</option><option value="confidence">Confidence</option></select></label>
                 </div>
 
                 <div class="filter-footer">
-                    <label><input type="checkbox" name="include-excluded"> Show protected and unavailable records</label>
+                    <label><input type="checkbox" name="include-excluded"> Show review-only, protected, and unavailable records</label>
                     <button class="secondary-button" type="reset">Reset filters</button>
                 </div>
             </form>
@@ -268,10 +273,11 @@
                         <tr>
                             <th scope="col"><span class="visually-hidden">Select</span></th>
                             <th scope="col">File</th>
-                            <th scope="col">Size</th>
+                            <th scope="col">On disk</th>
                             <th scope="col">Modified</th>
                             <th scope="col">Attributes</th>
                             <th scope="col">Confidence</th>
+                            <th scope="col">Removal risk</th>
                             <th scope="col">Actions</th>
                         </tr>
                     </thead>
@@ -285,9 +291,12 @@
                                 data-root="{{ candidate.scan_root }}"
                                 data-extension="{{ candidate.extension | lower }}"
                                 data-size-bytes="{{ candidate.size_sort }}"
+                                data-logical-size-bytes="{{ candidate.size_bytes or 0 }}"
+                                data-allocated-size-bytes="{{ candidate.allocated_size_bytes if candidate.allocated_size_bytes is not none else '' }}"
                                 data-age-days="{{ candidate.age_days if candidate.age_days is not none else '' }}"
                                 data-modified="{{ candidate.modified_at_utc or '' }}"
                                 data-confidence="{{ candidate.confidence }}"
+                                data-removal-risk="{{ candidate.removal_risk }}"
                                 data-eligibility="{{ candidate.eligibility }}"
                                 data-attributes="{{ candidate.attributes_filter }}">
                                 <td>
@@ -302,6 +311,7 @@
                                     <details class="candidate-details">
                                         <summary>Path and evidence</summary>
                                         <p class="path-value">{{ candidate.path }}</p>
+                                        <p><strong>Logical size:</strong> {{ candidate.size }}</p>
                                         <p><strong>Protection:</strong> {{ candidate.protection.explanation }}</p>
                                         <ul>
                                             {% for evidence in candidate.evidence %}
@@ -310,17 +320,18 @@
                                         </ul>
                                     </details>
                                 </th>
-                                <td>{{ candidate.size }}</td>
+                                <td>{{ candidate.allocated_size }}<span class="secondary-text">Logical: {{ candidate.size }}</span></td>
                                 <td>{% if candidate.modified_at_utc %}<time class="js-local-time" datetime="{{ candidate.modified_at_utc }}">{{ candidate.modified_at_utc }}</time>{% else %}Unavailable{% endif %}</td>
                                 <td><div class="attribute-badges">{% for attribute in candidate.attributes_view %}<span class="attribute-badge">{{ attribute.label }}</span>{% endfor %}</div></td>
                                 <td><span class="confidence confidence-{{ candidate.confidence }}">{{ candidate.confidence_label }}</span><span class="secondary-text">{{ candidate.eligibility_label }}</span></td>
+                                <td><span class="risk risk-{{ candidate.removal_risk }}">{{ candidate.removal_risk_label }}</span></td>
                                 <td>
                                     <div class="row-actions">
                                         <button type="button" class="text-button" data-copy-path>Copy path</button>
                                         <button type="button" class="text-button" data-open-folder
                                                 data-action-url="{{ url_for('open_storage_folder', drive=storage.drive.drive_letter) }}"
                                                 data-action-token="{{ storage_action_token }}"
-                                                {% if not candidate.selectable %}disabled title="Only eligible regular files can open their containing folder."{% endif %}>Open folder</button>
+                                                {% if not candidate.folder_openable %}disabled title="Only regular reviewable files can open their containing folder."{% endif %}>Open folder</button>
                                     </div>
                                 </td>
                             </tr>
@@ -365,6 +376,9 @@
                         <article class="panel status-panel status-unavailable"><div class="card-heading"><h3>{{ item.error_type | replace('_', ' ') | title }}</h3><span class="status-badge status-unavailable">Inaccessible</span></div><p>{{ item.message }}</p><p class="path-value">{{ item.path }}</p></article>
                     {% endfor %}
                 </div>
+                {% if storage.scan.issue_details_omitted %}
+                    <p class="panel safety-note"><strong>Bounded details:</strong> {{ storage.scan.issue_details_omitted }} additional issue record(s) were omitted to keep this report manageable. The totals above still include them.</p>
+                {% endif %}
             </section>
         {% endif %}
 

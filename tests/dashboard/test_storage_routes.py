@@ -38,6 +38,7 @@ def test_valid_storage_report_renders_drive_dashboard() -> None:
     assert b"Where the drive space is used" in response.data
     assert b"Cleanup-candidate summary" in response.data
     assert b"Every byte appears in one category only" in response.data
+    assert b"Grey does not mean corrupted" in response.data
     assert b"Candidate explorer" in response.data
     assert b"Match all" in response.data
     assert b"Match any" in response.data
@@ -48,6 +49,19 @@ def test_valid_storage_report_renders_drive_dashboard() -> None:
     assert b"Path contains" in response.data
     assert b'role="img"' in response.data
     assert b"read-only" in response.data.lower()
+
+
+def test_matching_drive_is_selected_from_multiple_storage_reports() -> None:
+    response = build_app(
+        [
+            STORAGE_FIXTURES / "candidate-attributes-storage-report.json",
+            STORAGE_FIXTURES / "healthy-storage-report.json",
+        ]
+    ).test_client().get("/storage/C:")
+
+    assert response.status_code == 200
+    assert b"Where the drive space is used" in response.data
+    assert b"healthy-storage-report.json" in response.data
 
 
 def test_empty_candidate_report_has_useful_empty_state() -> None:
@@ -189,6 +203,9 @@ def test_candidate_row_contains_evidence_and_safe_actions() -> None:
     assert b"python -m pip cache purge" in response.data
     assert b"Java 21.0.4" in response.data
     assert b"Automatic cleanup" in response.data
+    assert b'data-removal-risk="low"' in response.data
+    assert b"Removal risk" in response.data
+    assert b"On disk" in response.data
 
 
 def test_development_insight_content_is_html_escaped(tmp_path: Path) -> None:
@@ -213,6 +230,42 @@ def test_development_insight_content_is_html_escaped(tmp_path: Path) -> None:
     assert b"&lt;script&gt;alert" in response.data
 
 
+def test_high_risk_installer_is_visible_but_not_cleanup_selectable(
+    tmp_path: Path,
+) -> None:
+    report = json.loads(
+        (REPOSITORY_ROOT / "sample_data" / "sample-storage-report.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    candidate = report["candidates"][0]
+    candidate.update(
+        path=r"C:\Users\fictional.jamie\Downloads\Zoom.msi",
+        name="Zoom.msi",
+        extension=".msi",
+        removal_risk="high",
+    )
+    candidate["protection"] = {
+        "eligibility": "review_only",
+        "reason_code": "application_or_installer_file",
+        "explanation": "Synthetic installer requires manual review.",
+    }
+    storage_report = tmp_path / "review-only-storage-report.json"
+    storage_report.write_text(json.dumps(report), encoding="utf-8")
+
+    response = create_app(
+        report_path=REPOSITORY_ROOT / "sample_data" / "sample-report.json",
+        storage_report_path=storage_report,
+        test_config={"TESTING": True},
+    ).test_client().get("/storage/C:")
+
+    assert response.status_code == 200
+    assert b'data-removal-risk="high"' in response.data
+    assert b'data-eligibility="review_only"' in response.data
+    assert b"Review Only" in response.data
+    assert b"Synthetic installer requires manual review" in response.data
+
+
 def test_unavailable_candidate_has_disabled_selection_and_folder_action() -> None:
     response = build_app(
         STORAGE_FIXTURES / "partial-storage-report.json"
@@ -223,7 +276,7 @@ def test_unavailable_candidate_has_disabled_selection_and_folder_action() -> Non
     assert 'data-eligibility="unavailable"' in body
     assert "Select locked-fragment.tmp" in body
     assert 'disabled title="Unavailable metadata prevents selection' in body
-    assert "Only eligible regular files can open their containing folder" in body
+    assert "Only regular reviewable files can open their containing folder" in body
 
 
 def test_open_folder_action_uses_report_candidate_not_client_path() -> None:

@@ -18,6 +18,7 @@
     "files_examined": 320,
     "directories_examined": 39,
     "bytes_examined": 68000000000,
+    "allocated_bytes_examined": 64000000000,
     "candidate_details_retained": 1,
     "candidate_details_omitted": 0
   },
@@ -41,6 +42,7 @@
         "files_examined": 320,
         "directories_examined": 39,
         "bytes_examined": 68000000000,
+        "allocated_bytes_examined": 64000000000,
         "errors_count": 0
       }
     ],
@@ -92,8 +94,10 @@
     "accounting_method": "unique_candidate_id",
     "total_unique_candidates": 1,
     "total_unique_candidate_bytes": 6000000000,
+    "total_unique_candidate_allocated_bytes": 6000000000,
     "retained_candidates": 1,
     "retained_unique_candidate_bytes": 6000000000,
+    "retained_unique_candidate_allocated_bytes": 6000000000,
     "omitted_candidates": 0,
     "attributes": {
       "stale": {
@@ -138,6 +142,7 @@
       "name": "fictional-archive.iso.part",
       "extension": ".part",
       "size_bytes": 6000000000,
+      "allocated_size_bytes": 6000000000,
       "created_at_utc": "2022-03-04T02:00:00Z",
       "modified_at_utc": "2022-03-04T02:30:00Z",
       "last_accessed_at_utc": null,
@@ -169,6 +174,7 @@
         }
       ],
       "confidence": "high",
+      "removal_risk": "low",
       "protection": {
         "eligibility": "eligible",
         "reason_code": null,
@@ -245,6 +251,7 @@
       }
     ],
     "errors": [],
+    "errors_omitted": 0,
     "limitations": [
       "Only documented markers and supported local commands are used for this fictional development overview.",
       "Locations outside selected scan roots are displayed but not measured recursively.",

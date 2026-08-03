@@ -1,7 +1,8 @@
 # Read-only Storage Scanner
 
 The Storage Insights scanner creates a local, metadata-only JSON report for
-folders selected by the user. It is Milestone 2 of the storage extension.
+folders or an explicit drive root selected by the user. It is Milestone 2 of
+the storage extension.
 
 The scanner does not delete, move, rename, repair, upload, or open the contents
 of scanned files. It records paths, sizes, selected timestamps, evidence-based
@@ -9,16 +10,20 @@ candidate attributes, scan completeness, and structured errors.
 
 ## Safety boundaries
 
-- One or more specific roots must be supplied with `--root`.
-- A drive root such as `C:\` is rejected to prevent a silent whole-drive scan.
+- One or more roots must be supplied explicitly with `--root`.
+- A drive root such as `C:\` is supported only when the user supplies it in the
+  scanner command; the dashboard never starts a whole-drive scan silently.
 - All roots in one report must be distinct, non-overlapping folders on the
   same local Windows drive.
-- Windows, Program Files, ProgramData, Recovery, Recycle Bin internals, and
-  System Volume Information are protected from recursive scanning.
+- During an explicit drive-root scan, accessible Windows, Program Files,
+  ProgramData, Recovery, and Recycle Bin metadata contributes only to protected
+  chart categories; these files never become cleanup candidates.
 - Symbolic links, junctions, and other reparse points are recorded and skipped.
 - Access-denied, disappearing, or unreadable paths do not stop the remaining
   scan.
-- Candidate details are bounded while aggregate candidate totals continue.
+- Candidate details are bounded while aggregate candidate totals continue; the
+  retained set is chosen by deterministic review value rather than traversal
+  order.
 - Last-access time is informational and is never classification evidence.
 - Reports are schema-validated before export and existing reports are not
   overwritten.
@@ -73,6 +78,18 @@ python -m storage `
 The scanner never starts a scan by loading a dashboard page. It runs only when
 the user invokes this command.
 
+Scan every accessible, non-protected folder on a drive:
+
+```powershell
+python -m storage --root 'C:\' --output 'c-drive-report.json'
+python -m storage --root 'F:\' --output 'f-drive-report.json'
+```
+
+A drive-root scan can take considerably longer and will commonly be labelled
+partial because Windows denies access to some locations. Windows, Program
+Files, ProgramData, Recovery, Recycle Bin internals, System Volume Information,
+reparse points, and unreadable paths remain outside cleanup eligibility.
+
 ## View a report in the local dashboard
 
 Start the dashboard with both the diagnostic report and the generated storage
@@ -84,13 +101,27 @@ python -m dashboard `
   --storage-report '.\storage-reports\YOUR-STORAGE-REPORT.json'
 ```
 
+Load independent analyses for several drives by repeating `--storage-report`:
+
+```powershell
+python -m dashboard `
+  --report '.\reports\first-report.json' `
+  --storage-report '.\storage-reports\c-drive-report.json' `
+  --storage-report '.\storage-reports\f-drive-report.json'
+```
+
+Each disk card automatically uses the selected report whose drive letter
+matches that disk. There is no need to restart the dashboard to switch between
+C: and F:.
+
 Open <http://127.0.0.1:5000>, then select the matching disk card. The per-drive
 page validates storage contract `1.0.0` and displays capacity, non-overlapping
 categories, scan completeness, inaccessible paths, candidate totals, and
 limitations. Its candidate explorer supports:
 
 - `Match all` and `Match any` attribute filters;
-- minimum size and age, extension, root, confidence, and eligibility filters;
+- minimum size and age, extension, root, confidence, removal-risk, and
+  eligibility filters;
 - deterministic sorting by size, modification time, path, or confidence;
 - individual selection and `Select all visible` for the current page;
 - unique selected-byte totals that do not double-count overlapping attributes;
@@ -141,6 +172,17 @@ python -m storage `
 
 `Stale`, `Likely incomplete`, `Large`, `Empty`, and `Temporary` are review
 attributes. None means that a file is unused, corrupted, or safe to remove.
+
+The scanner separately labels removal risk. Application-managed AppData,
+installer/application files, databases, configuration files, and likely game
+or application saves are `High` risk and `Review only`; the dashboard can show
+and open their containing folders, but it cannot select them for recycling.
+Candidate confidence describes classification evidence, not removal safety.
+
+Drive-chart categories use Windows allocated-size metadata and a stable
+volume/file identity. Logical file size remains available for evidence, but it
+does not drive the physical-space donut chart. Inaccessible bytes and filesystem
+overhead remain in `Other or unreadable`.
 
 ## Development-storage insights
 

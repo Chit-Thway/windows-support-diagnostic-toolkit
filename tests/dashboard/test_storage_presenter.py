@@ -61,6 +61,8 @@ def test_candidate_unique_total_is_not_inflated_by_attribute_totals() -> None:
 
 def test_partial_report_preserves_completeness_and_exclusions() -> None:
     report = read_storage_fixture("partial-storage-report.json")
+    report["scan"]["inaccessible_path_details_omitted"] = 4
+    report["scan"]["scan_error_details_omitted"] = 4
 
     view = present_storage_report(report, diagnostic_status="Warning")
 
@@ -68,6 +70,8 @@ def test_partial_report_preserves_completeness_and_exclusions() -> None:
     assert view["scan"]["status_class"] == "unavailable"
     assert view["candidate_summary"]["excluded_count"] == 1
     assert view["inaccessible_paths"]
+    assert view["scan"]["inaccessible_paths_total"] == 5
+    assert view["scan"]["issue_details_omitted"] == 8
     assert view["candidates"][0]["selectable"] is False
 
 

@@ -83,6 +83,7 @@ def _present_development_insights(report: dict[str, Any]) -> dict[str, Any]:
             "python_locations": [],
             "java_locations": [],
             "errors": [],
+            "errors_omitted": 0,
             "limitations": [
                 "This older storage report does not contain development-storage insights."
             ],
@@ -125,6 +126,7 @@ def _present_development_insights(report: dict[str, Any]) -> dict[str, Any]:
 
     return {
         **insights,
+        "errors_omitted": insights.get("errors_omitted", 0),
         "status_label": _title_token(insights["status"]),
         "status_class": (
             "healthy" if insights["status"] == "complete" else "unavailable"
@@ -203,22 +205,41 @@ def present_storage_report(
             for attribute in candidate["attributes"]
         ]
         path = PureWindowsPath(candidate["path"])
+        eligibility = candidate["protection"]["eligibility"]
+        removal_risk = candidate.get(
+            "removal_risk",
+            "protected"
+            if eligibility in {"protected", "unavailable"}
+            else "medium",
+        )
+        allocated_size = candidate.get("allocated_size_bytes")
+        reclaimable_size = (
+            allocated_size
+            if allocated_size is not None
+            else candidate["size_bytes"] or 0
+        )
         candidates.append(
             {
                 **candidate,
                 "directory": str(path.parent),
                 "size": format_bytes(candidate["size_bytes"]),
-                "size_sort": candidate["size_bytes"] or 0,
+                "allocated_size": format_bytes(allocated_size),
+                "size_sort": reclaimable_size,
                 "age_days": age_days,
                 "attributes_view": attributes,
                 "attributes_filter": ",".join(candidate["attributes"]),
                 "confidence_label": _title_token(candidate["confidence"]),
-                "eligibility": candidate["protection"]["eligibility"],
-                "eligibility_label": _title_token(
-                    candidate["protection"]["eligibility"]
-                ),
+                "removal_risk": removal_risk,
+                "removal_risk_label": _title_token(removal_risk),
+                "eligibility": eligibility,
+                "eligibility_label": _title_token(eligibility),
                 "selectable": (
-                    candidate["protection"]["eligibility"] == "eligible"
+                    eligibility == "eligible"
+                    and candidate["is_regular_file"]
+                    and not candidate["is_reparse_point"]
+                ),
+                "folder_openable": (
+                    eligibility in {"eligible", "review_only"}
                     and candidate["is_regular_file"]
                     and not candidate["is_reparse_point"]
                 ),
@@ -238,6 +259,9 @@ def present_storage_report(
                 "display_path": root["canonical_path"] or root["requested_path"],
                 "status_label": _title_token(root["status"]),
                 "bytes_examined_display": format_bytes(root["bytes_examined"]),
+                "allocated_bytes_examined_display": format_bytes(
+                    root.get("allocated_bytes_examined")
+                ),
             }
         )
 
@@ -264,9 +288,20 @@ def present_storage_report(
                 scan["aggregate_coverage"]
             ),
             "bytes_examined_display": format_bytes(scan["bytes_examined"]),
+            "allocated_bytes_examined_display": format_bytes(
+                scan.get("allocated_bytes_examined")
+            ),
             "files_examined_display": f"{scan['files_examined']:,}",
             "directories_examined_display": f"{scan['directories_examined']:,}",
             "duration_seconds": round(scan["duration_ms"] / 1000, 2),
+            "inaccessible_paths_total": (
+                len(report["inaccessible_paths"])
+                + scan.get("inaccessible_path_details_omitted", 0)
+            ),
+            "issue_details_omitted": (
+                scan.get("inaccessible_path_details_omitted", 0)
+                + scan.get("scan_error_details_omitted", 0)
+            ),
         },
         "accounting_coverage": _title_token(accounting["coverage"]),
         "categories": categories,
@@ -278,10 +313,17 @@ def present_storage_report(
             "retained_unique_candidate_size": format_bytes(
                 summary["retained_unique_candidate_bytes"]
             ),
+            "total_unique_candidate_allocated_size": format_bytes(
+                summary.get("total_unique_candidate_allocated_bytes")
+            ),
+            "retained_unique_candidate_allocated_size": format_bytes(
+                summary.get("retained_unique_candidate_allocated_bytes")
+            ),
             "attributes": candidate_attributes,
-            "excluded_count": (
-                summary["attributes"]["protected"]["candidate_count"]
-                + summary["attributes"]["unavailable"]["candidate_count"]
+            "excluded_count": sum(
+                1
+                for candidate in candidates
+                if candidate["eligibility"] != "eligible"
             ),
         },
         "candidates": candidates,

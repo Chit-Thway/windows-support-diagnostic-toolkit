@@ -246,6 +246,17 @@ def test_duplicate_candidate_ids_fail_accounting_invariant(
         assert_candidate_accounting(report)
 
 
+def test_duplicate_candidate_paths_are_rejected(storage_fixture) -> None:
+    report = storage_fixture("candidate-attributes-storage-report.json")
+    report["candidates"][1]["path"] = report["candidates"][0]["path"]
+
+    with pytest.raises(
+        StorageReportValidationError,
+        match="candidate paths must be unique",
+    ):
+        validate_storage_report(report)
+
+
 def test_inflated_retained_bytes_fail_accounting_invariant(
     storage_fixture,
 ) -> None:
@@ -281,6 +292,43 @@ def test_partial_fixture_preserves_structured_errors(
     assert report["scan_errors"]
     assert report["inaccessible_paths"]
     assert report["candidates"][0]["protection"]["eligibility"] == "unavailable"
+
+
+def test_bounded_issue_detail_counts_match_retained_records(
+    storage_fixture,
+) -> None:
+    report = storage_fixture("partial-storage-report.json")
+    report["scan"].update(
+        inaccessible_path_details_retained=len(report["inaccessible_paths"]),
+        inaccessible_path_details_omitted=3,
+        scan_error_details_retained=len(report["scan_errors"]),
+        scan_error_details_omitted=3,
+    )
+
+    validate_storage_report(report)
+
+    report["scan"]["scan_error_details_retained"] += 1
+    with pytest.raises(
+        StorageReportValidationError,
+        match="issue-detail counts",
+    ):
+        validate_storage_report(report)
+
+
+def test_complete_report_cannot_hide_omitted_issue_details(storage_fixture) -> None:
+    report = storage_fixture("healthy-storage-report.json")
+    report["scan"].update(
+        inaccessible_path_details_retained=0,
+        inaccessible_path_details_omitted=1,
+        scan_error_details_retained=0,
+        scan_error_details_omitted=1,
+    )
+
+    with pytest.raises(
+        StorageReportValidationError,
+        match="complete scan cannot omit",
+    ):
+        validate_storage_report(report)
 
 
 @pytest.mark.parametrize(

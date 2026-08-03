@@ -23,7 +23,7 @@ def validate_candidate_for_folder_action(
     """Return the containing folder only for a currently safe report entry."""
 
     protection = candidate["protection"]
-    if protection["eligibility"] != "eligible":
+    if protection["eligibility"] not in {"eligible", "review_only"}:
         raise StorageActionError(
             "Protected or unavailable entries cannot open local folders."
         )

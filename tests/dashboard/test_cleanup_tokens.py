@@ -10,6 +10,7 @@ from dashboard.cleanup_tokens import (
     CleanupPreviewStore,
     HIGH_RISK_FILE_COUNT,
     HIGH_RISK_TOTAL_BYTES,
+    MAX_STORED_PREVIEWS,
 )
 
 
@@ -73,5 +74,27 @@ def test_large_selection_requires_typed_confirmation(
     assert preview.requires_additional_confirmation is True
     assert preview.confirmation_phrase == f"RECYCLE {len(candidates)} " + (
         "FILE" if len(candidates) == 1 else "FILES"
+    )
+
+
+def test_preview_store_evicts_oldest_state_at_its_memory_limit(tmp_path) -> None:
+    now = [datetime(2026, 8, 3, tzinfo=timezone.utc)]
+    store = CleanupPreviewStore(clock=lambda: now[0])
+    previews = []
+    for index in range(MAX_STORED_PREVIEWS + 1):
+        previews.append(
+            store.create(
+                drive_letter="F:",
+                storage_report_path=tmp_path / "report.json",
+                source_generated_at_utc="2026-08-03T00:00:00Z",
+                candidates=[candidate(str(index))],
+            )
+        )
+        now[0] += timedelta(microseconds=1)
+
+    with pytest.raises(CleanupPreviewError, match="missing"):
+        store.consume(previews[0].token)
+    assert store.consume(previews[-1].token).candidates[0]["candidate_id"] == str(
+        MAX_STORED_PREVIEWS
     )
 

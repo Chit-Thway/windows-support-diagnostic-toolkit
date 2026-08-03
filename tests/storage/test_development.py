@@ -114,6 +114,27 @@ def test_invalid_pyvenv_marker_is_reported_without_claiming_an_environment(
     )
 
 
+def test_development_discovery_errors_are_bounded(tmp_path: Path) -> None:
+    pip_cache = tmp_path / "pip-cache"
+    inspector = DevelopmentInsightsInspector(
+        scan_roots=(tmp_path,),
+        command_runner=lambda _command: CommandResult(0, str(pip_cache), ""),
+        java_finder=lambda _name: None,
+    )
+    for index in range(105):
+        environment_root = tmp_path / f"fictional-{index:03d}"
+        (environment_root / "pyvenv.cfg").mkdir(parents=True)
+        with os.scandir(environment_root) as entries:
+            inspector.observe_directory(environment_root, list(entries))
+
+    report = inspector.build_report(scan_status="complete")
+
+    assert report["status"] == "partial"
+    assert len(report["errors"]) == 100
+    assert report["errors_omitted"] == 5
+    assert any("5 additional" in item for item in report["limitations"])
+
+
 def test_failed_supported_query_is_structured_and_nonfatal(tmp_path: Path) -> None:
     inspector = DevelopmentInsightsInspector(
         scan_roots=(tmp_path,),

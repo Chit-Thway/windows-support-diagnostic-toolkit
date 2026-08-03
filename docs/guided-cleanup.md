@@ -13,7 +13,8 @@ deletes a file as a fallback.
 4. Select individual eligible files or use `Select all visible` for the
    current page.
 5. Choose **Review Recycle Bin action**.
-6. Read every exact path, size, classification reason, and confidence label.
+6. Read every exact path, logical and allocated size, classification reason,
+   confidence label, and removal-risk label.
 7. Tick the final confirmation checkbox. Selections of 20 or more files or at
    least 10 GiB also require the displayed confirmation phrase.
 8. Submit the one-time confirmation.
@@ -32,6 +33,8 @@ reported path:
 - remains on the analysed drive and inside the exact approved scan root;
 - is not a symbolic link, junction, or other detected reparse point;
 - is not in a protected Windows or application location;
+- still passes the current removal-risk policy rather than relying only on the
+  policy stored in an older report;
 - still has the reviewed byte size and modification time.
 
 A file that fails a check is skipped. Other selected files continue and receive
@@ -61,6 +64,9 @@ real machine paths. The result contract is
   Recycle Bin, or offer permanent deletion.
 - Classification evidence explains why a file deserves review. It does not
   prove that a file is disposable, unused, or corrupted.
+- High-risk application data, installer/application files, databases,
+  configuration files, and likely save data are review-only and cannot enter a
+  cleanup preview.
 - If Recycle Bin support is unavailable, the operation fails safely and leaves
   the file in place.
 - The preview store is process-local. Restarting the dashboard invalidates

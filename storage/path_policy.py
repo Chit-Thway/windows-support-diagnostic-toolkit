@@ -42,16 +42,18 @@ def is_reparse_point(path: Path, stat_result=None) -> bool:
     return bool(attributes & FILE_ATTRIBUTE_REPARSE_POINT)
 
 
-def default_protected_roots(
+def default_protected_root_categories(
     drive_letter: str,
     environment: Mapping[str, str] | None = None,
-) -> tuple[Path, ...]:
-    """Return conservative Windows locations excluded from recursive scans."""
+) -> tuple[tuple[Path, str], ...]:
+    """Return protected Windows locations and their accounting categories."""
 
     environment = os.environ if environment is None else environment
-    candidates: list[Path] = []
+    candidates: list[tuple[Path, str]] = []
+    system_root = environment.get("SystemRoot")
+    if system_root:
+        candidates.append((Path(system_root), "protected_system"))
     for variable in (
-        "SystemRoot",
         "ProgramFiles",
         "ProgramFiles(x86)",
         "ProgramW6432",
@@ -59,22 +61,40 @@ def default_protected_roots(
     ):
         value = environment.get(variable)
         if value:
-            candidates.append(Path(value))
+            candidates.append((Path(value), "installed_applications"))
 
     drive_root = Path(f"{drive_letter}\\")
     candidates.extend(
         (
-            drive_root / "$Recycle.Bin",
-            drive_root / "System Volume Information",
-            drive_root / "Recovery",
+            (drive_root / "$Recycle.Bin", "protected_system"),
+            (drive_root / "System Volume Information", "protected_system"),
+            (drive_root / "Recovery", "protected_system"),
         )
     )
 
-    unique: dict[str, Path] = {}
-    for candidate in candidates:
+    unique: dict[str, tuple[Path, str]] = {}
+    for candidate, category in candidates:
         normalized = os.path.normcase(os.path.abspath(str(candidate)))
-        unique.setdefault(normalized, Path(os.path.abspath(str(candidate))))
+        unique.setdefault(
+            normalized,
+            (Path(os.path.abspath(str(candidate))), category),
+        )
     return tuple(unique.values())
+
+
+def default_protected_roots(
+    drive_letter: str,
+    environment: Mapping[str, str] | None = None,
+) -> tuple[Path, ...]:
+    """Return conservative locations excluded from cleanup eligibility."""
+
+    return tuple(
+        path
+        for path, _category in default_protected_root_categories(
+            drive_letter,
+            environment,
+        )
+    )
 
 
 class ProtectedPathPolicy:
@@ -98,11 +118,28 @@ class ProtectedPathPolicy:
             return self._explicit_protected_roots
         return default_protected_roots(drive_letter, self._environment)
 
+    def protected_category(self, path: Path, drive_letter: str) -> str | None:
+        """Return the non-cleanup category for a protected path, if any."""
+
+        if self._explicit_protected_roots is not None:
+            return (
+                "protected_system"
+                if any(
+                    is_path_within(path, protected_root)
+                    for protected_root in self._explicit_protected_roots
+                )
+                else None
+            )
+        for protected_root, category in default_protected_root_categories(
+            drive_letter,
+            self._environment,
+        ):
+            if is_path_within(path, protected_root):
+                return category
+        return None
+
     def is_protected(self, path: Path, drive_letter: str) -> bool:
-        return any(
-            is_path_within(path, protected_root)
-            for protected_root in self.protected_roots_for_drive(drive_letter)
-        )
+        return self.protected_category(path, drive_letter) is not None
 
     def validate_roots(
         self,
@@ -111,8 +148,7 @@ class ProtectedPathPolicy:
         roots = tuple(requested_roots)
         if not roots:
             raise UnsafeScanRootError(
-                "Select at least one directory to scan; whole-drive scanning "
-                "is never started silently."
+                "Select at least one directory or explicit drive root to scan."
             )
 
         resolved_roots: list[Path] = []
@@ -145,11 +181,6 @@ class ProtectedPathPolicy:
             if not DRIVE_PATTERN.fullmatch(current_drive):
                 raise UnsafeScanRootError(
                     "Only local Windows drive-letter roots are supported."
-                )
-            if resolved == Path(f"{current_drive}\\"):
-                raise UnsafeScanRootError(
-                    "Select specific folders instead of scanning an entire "
-                    "drive silently."
                 )
             if drive_letter is None:
                 drive_letter = current_drive

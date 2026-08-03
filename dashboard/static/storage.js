@@ -113,7 +113,12 @@
         }
 
         const confidence = form.elements.confidence.value;
-        return !confidence || row.dataset.confidence === confidence;
+        if (confidence && row.dataset.confidence !== confidence) {
+            return false;
+        }
+
+        const removalRisk = form.elements["removal-risk"].value;
+        return !removalRisk || row.dataset.removalRisk === removalRisk;
     }
 
     function compareRows(left, right) {
@@ -309,9 +314,14 @@
             .map((row) => ({
                 candidate_id: row.dataset.candidateId,
                 path: row.dataset.candidatePath,
-                size_bytes: Number(row.dataset.sizeBytes),
+                size_bytes: Number(row.dataset.logicalSizeBytes),
+                allocated_size_bytes:
+                    row.dataset.allocatedSizeBytes === ""
+                        ? null
+                        : Number(row.dataset.allocatedSizeBytes),
                 attributes: row.dataset.attributes.split(",").filter(Boolean),
                 confidence: row.dataset.confidence,
+                removal_risk: row.dataset.removalRisk,
             }));
         const plan = {
             schema_version: "1.0.0",

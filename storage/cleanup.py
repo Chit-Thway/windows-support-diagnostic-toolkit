@@ -16,6 +16,7 @@ from jsonschema import Draft202012Validator, FormatChecker
 from jsonschema.exceptions import SchemaError
 
 from .path_policy import ProtectedPathPolicy, is_path_within, is_reparse_point
+from .risk import assess_removal_risk
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CLEANUP_SCHEMA_PATH = PROJECT_ROOT / "schema" / "cleanup-record.schema.json"
@@ -108,7 +109,7 @@ def revalidate_candidate(
         return None, _result(
             candidate,
             "skipped_protected_or_invalid",
-            "The report marks this entry as protected or unavailable.",
+            "The report marks this entry as review-only, protected, or unavailable.",
         )
     if not candidate["is_regular_file"] or candidate["is_reparse_point"]:
         return None, _result(
@@ -118,6 +119,13 @@ def revalidate_candidate(
         )
 
     path = Path(os.path.abspath(candidate["path"]))
+    current_risk = assess_removal_risk(path, tuple(candidate["attributes"]))
+    if current_risk.eligibility != "eligible":
+        return None, _result(
+            candidate,
+            "skipped_protected_or_invalid",
+            "The current removal-risk policy keeps this path review-only.",
+        )
     drive_letter = report["drive"]["drive_letter"].upper()
     if path.drive.upper() != drive_letter:
         return None, _result(
@@ -233,6 +241,14 @@ def execute_guided_cleanup(
     if len(candidate_ids) != len(set(candidate_ids)):
         raise CleanupRecordError(
             "A guided cleanup cannot contain duplicate candidate identifiers."
+        )
+    selected_paths = [
+        os.path.normcase(os.path.abspath(candidate["path"]))
+        for candidate in selected
+    ]
+    if len(selected_paths) != len(set(selected_paths)):
+        raise CleanupRecordError(
+            "A guided cleanup cannot contain the same reviewed path twice."
         )
     started_at = clock().astimezone(timezone.utc)
     results: list[dict[str, Any]] = []

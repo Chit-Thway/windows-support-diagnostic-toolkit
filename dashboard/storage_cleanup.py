@@ -20,7 +20,10 @@ from .storage_actions import (
     validate_candidate_for_folder_action,
 )
 from .storage_presenter import format_bytes, present_storage_report
-from .storage_report_loader import StorageReportLoadError, load_storage_report
+from .storage_report_loader import (
+    StorageReportLoadError,
+    load_storage_report_for_drive,
+)
 
 MAX_CLEANUP_SELECTION = 500
 
@@ -46,16 +49,10 @@ def _valid_action_token(app: Flask) -> bool:
 
 
 def _load_configured_report(app: Flask, drive: str) -> tuple[dict[str, Any], Path]:
-    configured_path = app.config["STORAGE_REPORT_PATH"]
-    if configured_path is None:
+    configured_paths = app.config["STORAGE_REPORT_PATHS"]
+    if not configured_paths:
         raise StorageReportLoadError("No storage analysis is selected.")
-    path = Path(configured_path)
-    report = load_storage_report(path)
-    if report["drive"]["drive_letter"] != drive:
-        raise StorageReportLoadError(
-            "The selected storage analysis belongs to another drive."
-        )
-    return report, path
+    return load_storage_report_for_drive(configured_paths, drive)
 
 
 def register_storage_cleanup_routes(app: Flask) -> None:
