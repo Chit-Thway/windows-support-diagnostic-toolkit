@@ -155,6 +155,21 @@ def test_public_sample_matches_schema(
     assert_schema_valid(sample, storage_validator)
 
 
+def test_public_sample_contains_valid_non_summed_folder_candidates() -> None:
+    sample = read_json(
+        REPOSITORY_ROOT / "sample_data" / "sample-storage-report.json"
+    )
+
+    validate_storage_report(sample)
+    summary = sample["folder_candidate_summary"]
+    folders = sample["folder_candidates"]
+    assert summary["accounting_method"] == "overlapping_hierarchy"
+    assert summary["retained_candidates"] == len(folders)
+    assert all(candidate["item_type"] == "folder" for candidate in folders)
+    assert all(candidate["is_directory"] is True for candidate in folders)
+    assert any("empty" in candidate["attributes"] for candidate in folders)
+
+
 def test_malformed_fixture_is_rejected_by_json_parser() -> None:
     malformed_path = (
         FIXTURES_DIRECTORY / "malformed-storage-report.json"

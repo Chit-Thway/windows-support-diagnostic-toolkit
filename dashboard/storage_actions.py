@@ -27,9 +27,15 @@ def validate_candidate_for_folder_action(
         raise StorageActionError(
             "Protected or unavailable entries cannot open local folders."
         )
-    if not candidate["is_regular_file"] or candidate["is_reparse_point"]:
+    item_type = candidate.get("item_type", "file")
+    valid_item = (
+        candidate.get("is_directory") is True
+        if item_type == "folder"
+        else candidate["is_regular_file"]
+    )
+    if not valid_item or candidate["is_reparse_point"]:
         raise StorageActionError(
-            "Only regular, non-reparse-point file records can open folders."
+            "Only regular files or directory records without reparse points can be opened."
         )
 
     candidate_path = Path(candidate["path"])
@@ -54,7 +60,7 @@ def validate_candidate_for_folder_action(
             "Protected Windows or application locations cannot be opened here."
         )
 
-    return candidate_path.parent
+    return candidate_path if item_type == "folder" else candidate_path.parent
 
 
 def open_containing_folder(folder: Path) -> None:

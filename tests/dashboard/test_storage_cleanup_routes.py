@@ -126,12 +126,19 @@ def build_app(
     )
 
 
-def preview_selection(client, drive: str, candidate_ids: list[str]):
+def preview_selection(
+    client,
+    drive: str,
+    candidate_ids: list[str],
+    *,
+    candidate_kind: str = "file",
+):
     return client.post(
         f"/storage/{drive}/cleanup/preview",
         data={
             "action_token": "fixed-action-token",
             "candidate_id": candidate_ids,
+            "candidate_kind": candidate_kind,
         },
     )
 
@@ -180,6 +187,54 @@ def test_preview_shows_every_exact_path_and_escapes_report_content(tmp_path) -> 
     assert "<script>alert('unsafe')</script>" not in body
     assert "&lt;script&gt;alert" in body
     assert "No file has been moved or deleted" in body
+
+
+def test_folder_preview_uses_folder_collection_and_requires_phrase(tmp_path) -> None:
+    report = read_json(
+        REPOSITORY_ROOT / "sample_data" / "sample-storage-report.json"
+    )
+    report_path = write_storage_report(tmp_path, report)
+    client = build_app(report_path, tmp_path, []).test_client()
+
+    response = preview_selection(
+        client,
+        "C:",
+        ["folder-sample-002"],
+        candidate_kind="folder",
+    )
+    body = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "Review every folder before recycling" in body
+    assert "No folder has been moved or deleted" in body
+    assert "RECYCLE 1 FOLDER" in body
+    assert "Old Empty" in body
+
+
+def test_review_only_folder_is_rejected_before_cleanup_preview(tmp_path) -> None:
+    report = read_json(
+        REPOSITORY_ROOT / "sample_data" / "sample-storage-report.json"
+    )
+    candidate = report["folder_candidates"][0]
+    candidate["removal_risk"] = "high"
+    candidate["contains_high_risk_items"] = True
+    candidate["protection"] = {
+        "eligibility": "review_only",
+        "reason_code": "high_risk_descendant",
+        "explanation": "Fictional application data remains review-only.",
+    }
+    report_path = write_storage_report(tmp_path, report)
+    client = build_app(report_path, tmp_path, []).test_client()
+
+    response = preview_selection(
+        client,
+        "C:",
+        [candidate["candidate_id"]],
+        candidate_kind="folder",
+    )
+
+    assert response.status_code == 409
+    assert b"cannot enter a cleanup preview" in response.data
 
 
 def test_unknown_duplicate_and_empty_selections_are_rejected(tmp_path) -> None:

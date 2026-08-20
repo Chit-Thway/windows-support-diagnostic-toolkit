@@ -143,6 +143,85 @@ def _present_development_insights(report: dict[str, Any]) -> dict[str, Any]:
             if location["ecosystem"] == "java"
         ],
     }
+
+
+def _present_candidates(
+    report: dict[str, Any], candidates: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    generated_at = _parse_utc(report["generated_at_utc"])
+    presented: list[dict[str, Any]] = []
+    for candidate in candidates:
+        modified_at = _parse_utc(candidate["modified_at_utc"])
+        age_days = None
+        if generated_at is not None and modified_at is not None:
+            age_days = max(0, (generated_at - modified_at).days)
+
+        attributes = [
+            {"key": attribute, "label": _title_token(attribute)}
+            for attribute in candidate["attributes"]
+        ]
+        path = PureWindowsPath(candidate["path"])
+        eligibility = candidate["protection"]["eligibility"]
+        removal_risk = candidate.get(
+            "removal_risk",
+            "protected"
+            if eligibility in {"protected", "unavailable"}
+            else "medium",
+        )
+        allocated_size = candidate.get("allocated_size_bytes")
+        reclaimable_size = (
+            allocated_size
+            if allocated_size is not None
+            else candidate["size_bytes"] or 0
+        )
+        item_type = candidate.get("item_type", "file")
+        is_reviewable_item = (
+            candidate.get("is_directory") is True
+            if item_type == "folder"
+            else candidate["is_regular_file"]
+        )
+        presented.append(
+            {
+                **candidate,
+                "item_type": item_type,
+                "item_type_label": _title_token(item_type),
+                "directory": str(path.parent),
+                "size": format_bytes(candidate["size_bytes"]),
+                "allocated_size": format_bytes(allocated_size),
+                "size_sort": reclaimable_size,
+                "age_days": age_days,
+                "attributes_view": attributes,
+                "attributes_filter": ",".join(candidate["attributes"]),
+                "confidence_label": _title_token(candidate["confidence"]),
+                "removal_risk": removal_risk,
+                "removal_risk_label": _title_token(removal_risk),
+                "eligibility": eligibility,
+                "eligibility_label": _title_token(eligibility),
+                "selectable": (
+                    eligibility == "eligible"
+                    and is_reviewable_item
+                    and not candidate["is_reparse_point"]
+                ),
+                "folder_openable": (
+                    eligibility in {"eligible", "review_only"}
+                    and is_reviewable_item
+                    and not candidate["is_reparse_point"]
+                ),
+                "file_count_display": (
+                    f"{candidate.get('file_count', 0):,}"
+                    if item_type == "folder"
+                    else None
+                ),
+                "directory_count_display": (
+                    f"{candidate.get('directory_count', 0):,}"
+                    if item_type == "folder"
+                    else None
+                ),
+            }
+        )
+    return presented
+
+
 def present_storage_report(
     report: dict[str, Any], diagnostic_status: str
 ) -> dict[str, Any]:
@@ -189,65 +268,44 @@ def present_storage_report(
             }
         )
 
-    generated_at = _parse_utc(report["generated_at_utc"])
-    candidates = []
-    for candidate in report["candidates"]:
-        modified_at = _parse_utc(candidate["modified_at_utc"])
-        age_days = None
-        if generated_at is not None and modified_at is not None:
-            age_days = max(0, (generated_at - modified_at).days)
-
-        attributes = [
-            {
-                "key": attribute,
-                "label": _title_token(attribute),
-            }
-            for attribute in candidate["attributes"]
+    folder_summary = report.get("folder_candidate_summary")
+    folder_candidate_attributes = []
+    if folder_summary is not None:
+        for key, label in ATTRIBUTE_PRESENTATION:
+            attribute = folder_summary["attributes"][key]
+            folder_candidate_attributes.append(
+                {
+                    "key": key,
+                    "label": label,
+                    "count": attribute["candidate_count"],
+                    "bytes": attribute["overlapping_bytes"],
+                    "size": format_bytes(attribute["overlapping_bytes"]),
+                }
+            )
+    else:
+        folder_summary = {
+            "accounting_method": "unavailable",
+            "total_candidates": 0,
+            "retained_candidates": 0,
+            "omitted_candidates": 0,
+            "largest_candidate_allocated_bytes": 0,
+            "attributes": {},
+        }
+        folder_candidate_attributes = [
+            {"key": key, "label": label, "count": 0, "bytes": 0, "size": "0 B"}
+            for key, label in ATTRIBUTE_PRESENTATION
         ]
-        path = PureWindowsPath(candidate["path"])
-        eligibility = candidate["protection"]["eligibility"]
-        removal_risk = candidate.get(
-            "removal_risk",
-            "protected"
-            if eligibility in {"protected", "unavailable"}
-            else "medium",
-        )
-        allocated_size = candidate.get("allocated_size_bytes")
-        reclaimable_size = (
-            allocated_size
-            if allocated_size is not None
-            else candidate["size_bytes"] or 0
-        )
-        candidates.append(
-            {
-                **candidate,
-                "directory": str(path.parent),
-                "size": format_bytes(candidate["size_bytes"]),
-                "allocated_size": format_bytes(allocated_size),
-                "size_sort": reclaimable_size,
-                "age_days": age_days,
-                "attributes_view": attributes,
-                "attributes_filter": ",".join(candidate["attributes"]),
-                "confidence_label": _title_token(candidate["confidence"]),
-                "removal_risk": removal_risk,
-                "removal_risk_label": _title_token(removal_risk),
-                "eligibility": eligibility,
-                "eligibility_label": _title_token(eligibility),
-                "selectable": (
-                    eligibility == "eligible"
-                    and candidate["is_regular_file"]
-                    and not candidate["is_reparse_point"]
-                ),
-                "folder_openable": (
-                    eligibility in {"eligible", "review_only"}
-                    and candidate["is_regular_file"]
-                    and not candidate["is_reparse_point"]
-                ),
-            }
-        )
+
+    candidates = _present_candidates(report, report["candidates"])
+    folder_candidates = _present_candidates(
+        report, report.get("folder_candidates", [])
+    )
 
     root_options = sorted(
-        {candidate["scan_root"] for candidate in candidates},
+        {
+            candidate["scan_root"]
+            for candidate in candidates + folder_candidates
+        },
         key=str.casefold,
     )
 
@@ -326,7 +384,22 @@ def present_storage_report(
                 if candidate["eligibility"] != "eligible"
             ),
         },
+        "folder_analysis_available": "folder_candidates" in report,
+        "folder_candidate_summary": {
+            **folder_summary,
+            "largest_candidate_allocated_size": format_bytes(
+                folder_summary["largest_candidate_allocated_bytes"]
+            ),
+            "attributes": folder_candidate_attributes,
+            "excluded_count": sum(
+                1
+                for candidate in folder_candidates
+                if candidate["eligibility"] != "eligible"
+            ),
+        },
         "candidates": candidates,
+        "folder_candidates": folder_candidates,
+        "all_candidates": candidates + folder_candidates,
         "candidate_root_options": root_options,
         "roots": roots,
         "inaccessible_paths": report["inaccessible_paths"],

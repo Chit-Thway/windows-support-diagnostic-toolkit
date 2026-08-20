@@ -66,16 +66,23 @@ def register_storage_cleanup_routes(app: Flask) -> None:
             )
 
         candidate_ids = request.form.getlist("candidate_id")
+        candidate_kind = request.form.get("candidate_kind", "file")
+        if candidate_kind not in {"file", "folder"}:
+            return _error_response(
+                "Selection rejected",
+                "The cleanup selection type is invalid.",
+                400,
+            )
         if not candidate_ids:
             return _error_response(
-                "No files selected",
-                "Return to the candidate explorer and select individual files to review.",
+                "No items selected",
+                "Return to the candidate explorer and select individual items to review.",
                 400,
             )
         if len(candidate_ids) > MAX_CLEANUP_SELECTION:
             return _error_response(
                 "Selection is too large",
-                f"Review no more than {MAX_CLEANUP_SELECTION} files in one operation.",
+                f"Review no more than {MAX_CLEANUP_SELECTION} items in one operation.",
                 400,
             )
         if len(candidate_ids) != len(set(candidate_ids)):
@@ -90,9 +97,14 @@ def register_storage_cleanup_routes(app: Flask) -> None:
         except StorageReportLoadError as error:
             return _error_response(error.title, error.detail, error.status_code)
 
+        source_candidates = (
+            report.get("folder_candidates", [])
+            if candidate_kind == "folder"
+            else report["candidates"]
+        )
         candidate_map = {
             candidate["candidate_id"]: candidate
-            for candidate in report["candidates"]
+            for candidate in source_candidates
         }
         if any(candidate_id not in candidate_map for candidate_id in candidate_ids):
             return _error_response(
@@ -102,6 +114,15 @@ def register_storage_cleanup_routes(app: Flask) -> None:
             )
 
         selected = [candidate_map[candidate_id] for candidate_id in candidate_ids]
+        if any(
+            candidate["protection"]["eligibility"] != "eligible"
+            for candidate in selected
+        ):
+            return _error_response(
+                "Unsafe selection rejected",
+                "Review-only, protected, and unavailable items cannot enter a cleanup preview.",
+                409,
+            )
         try:
             for candidate in selected:
                 validate_candidate_for_folder_action(report, candidate)
@@ -119,9 +140,14 @@ def register_storage_cleanup_routes(app: Flask) -> None:
             candidates=selected,
         )
         presented = present_storage_report(report, diagnostic_status="Unavailable")
+        presented_candidates = (
+            presented["folder_candidates"]
+            if candidate_kind == "folder"
+            else presented["candidates"]
+        )
         presented_by_id = {
             candidate["candidate_id"]: candidate
-            for candidate in presented["candidates"]
+            for candidate in presented_candidates
         }
         preview_candidates = [
             presented_by_id[candidate_id] for candidate_id in candidate_ids
@@ -160,7 +186,7 @@ def register_storage_cleanup_routes(app: Flask) -> None:
         if request.form.get("confirm_cleanup") != "yes":
             return _error_response(
                 "Explicit confirmation required",
-                "No files were changed. Create a new preview and confirm the review checkbox.",
+                "No items were changed. Create a new preview and confirm the review checkbox.",
                 400,
             )
         if (
@@ -170,7 +196,7 @@ def register_storage_cleanup_routes(app: Flask) -> None:
         ):
             return _error_response(
                 "Additional confirmation did not match",
-                "No files were changed. Create a new preview and enter the displayed phrase exactly.",
+                "No items were changed. Create a new preview and enter the displayed phrase exactly.",
                 400,
             )
 
@@ -181,19 +207,24 @@ def register_storage_cleanup_routes(app: Flask) -> None:
         if str(report_path.resolve()) != preview.storage_report_path:
             return _error_response(
                 "Storage report changed",
-                "The selected storage report path changed after review. No files were changed.",
+                "The selected storage report path changed after review. No items were changed.",
                 409,
             )
         if report["generated_at_utc"] != preview.source_generated_at_utc:
             return _error_response(
                 "Storage report changed",
-                "The storage report was replaced after review. No files were changed.",
+                "The storage report was replaced after review. No items were changed.",
                 409,
             )
 
+        source_candidates = (
+            report.get("folder_candidates", [])
+            if preview.candidate_kind == "folder"
+            else report["candidates"]
+        )
         current_candidates = {
             candidate["candidate_id"]: candidate
-            for candidate in report["candidates"]
+            for candidate in source_candidates
         }
         selected: list[dict[str, Any]] = []
         for reviewed in preview.candidates:
@@ -201,7 +232,7 @@ def register_storage_cleanup_routes(app: Flask) -> None:
             if current is None or current != reviewed:
                 return _error_response(
                     "Reviewed selection changed",
-                    "A reviewed candidate changed in the report. No files were changed.",
+                    "A reviewed candidate changed in the report. No items were changed.",
                     409,
                 )
             selected.append(current)

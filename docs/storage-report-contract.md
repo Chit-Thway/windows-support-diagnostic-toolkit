@@ -46,6 +46,8 @@ The storage report does not contain:
   "accounting": {},
   "candidate_summary": {},
   "candidates": [],
+  "folder_candidate_summary": {},
+  "folder_candidates": [],
   "inaccessible_paths": [],
   "scan_errors": [],
   "development_insights": {},
@@ -63,8 +65,10 @@ The storage report does not contain:
 | `drive` | Drive capacity values observed at scan time. |
 | `scan_scope` | User-approved roots and classification settings used for the scan. |
 | `accounting` | Six non-overlapping drive chart categories. |
-| `candidate_summary` | Unique candidate totals and overlapping attribute summaries. |
+| `candidate_summary` | Unique file-candidate totals and overlapping attribute summaries. |
 | `candidates` | Bounded file-level metadata, evidence, confidence, and protection. |
+| `folder_candidate_summary` | Optional overlapping hierarchy totals for folder-tree candidates. |
+| `folder_candidates` | Optional bounded folder-tree metadata, evidence, confidence, and protection. |
 | `inaccessible_paths` | Paths that could not be inspected safely. |
 | `scan_errors` | Structured, recoverable or terminal scan errors. |
 | `development_insights` | Optional supported Python, pip-cache, and Java locations with explicit measurement boundaries. |
@@ -143,7 +147,8 @@ The options snapshot makes later classifications reproducible:
 - large-file byte threshold;
 - minimum age for incomplete-download evidence;
 - minimum age for temporary-file evidence;
-- maximum detailed candidates retained;
+- maximum detailed file candidates retained;
+- maximum detailed folder candidates retained;
 - an explicit `false` value for using last-access time as classification
   evidence;
 - whether supported development-storage discovery was enabled.
@@ -223,7 +228,8 @@ that deserves review. It is not a deletion recommendation.
 Each retained record contains:
 
 - a report-local `candidate_id`;
-- full local path, scan root, name, and extension;
+- full local path, scan root, name, and extension (up to the Windows filename
+  component limit, including long hash-like suffixes);
 - logical size, optional allocated size, and selected timestamps, using `null`
   when unavailable;
 - last-access reliability;
@@ -260,6 +266,47 @@ databases, configuration files, and likely save data are high-risk review-only
 records. Cleanup immediately reapplies the current risk policy so an older
 report cannot bypass new protections.
 
+## Folder candidate records
+
+Milestone 8 reports may include `folder_candidate_summary` and
+`folder_candidates`. They are optional so earlier valid `1.0.0` reports remain
+readable; consumers present folder analysis as unavailable until the report is
+regenerated.
+
+Folder candidates are aggregated during the same metadata traversal as file
+candidates. No second content scan occurs. A retained folder record includes:
+
+- `item_type: "folder"`, full path, scan root, name, and a report-local ID;
+- total descendant logical and allocated bytes;
+- descendant file and subfolder counts;
+- oldest and newest descendant modification times;
+- whether any descendant metadata was unavailable;
+- a SHA-256 fingerprint of names and metadata only, never file contents;
+- one or more evidence attributes, confidence, removal risk, and eligibility;
+- directory and reparse-point state.
+
+A folder is `stale` only when every observed descendant file has crossed the
+configured threshold. A folder tree containing any newer file is not stale.
+Empty or equivalent stale chains are collapsed to the highest useful candidate
+so a hierarchy such as `parent/child/empty` does not create redundant cleanup
+rows. The approved scan root itself is never a candidate.
+
+Folder sizes deliberately use path-based hierarchy aggregation. A parent's
+size includes its descendants, so parent and child rows overlap and must never
+be added together. Hard-linked files can also make a folder's estimated
+recoverable size higher than the physical allocation ultimately reclaimed.
+These values do not alter the non-overlapping drive chart.
+
+Folder cleanup eligibility is intentionally narrower than file eligibility.
+Application-managed AppData, likely game or application saves,
+application/configuration/runtime trees, protected or unavailable trees, and
+folders identified only because they are large are high-risk `review_only`
+records. If a tree is both high risk and partially unreadable, `unavailable`
+takes precedence and the tree cannot be selected. Folder actions require a
+typed confirmation and whole-tree
+revalidation. The same operation cannot contain both a parent and its
+descendant.
+
 ## Overlapping attributes and unique-byte accounting
 
 Candidate attributes intentionally overlap. A 6 GB file can be stale, large,
@@ -285,8 +332,16 @@ candidate rows and the summary.
 
 When rows are bounded, aggregate totals include omitted candidates while the
 report clearly states how many details were omitted. Retained rows are selected
-by deterministic review value—eligibility, lower removal risk, stronger
-evidence, confidence, and allocated size—not filesystem traversal order.
+by physical allocated size first. Eligibility, lower removal risk, stronger
+evidence, and confidence provide deterministic tie-breakers; filesystem
+traversal order does not decide which rows survive the limit. Dashboard filters
+then apply to this retained set before the selected display sort is applied.
+
+`folder_candidate_summary` uses the accounting method
+`overlapping_hierarchy`. Its per-attribute counts and bytes describe review
+evidence only. They are not unique recovery totals and must never be summed.
+The summary separately reports retained and omitted folder details and the
+largest retained tree.
 
 ## Partial scans and structured errors
 
@@ -320,6 +375,8 @@ Public fixtures cover:
   attributes;
 - candidates with multiple overlapping attributes;
 - inaccessible metadata and a partial scan;
+- folder candidates with aggregated descendant metadata and collapsed empty
+  hierarchy;
 - malformed JSON.
 
 The default public example is

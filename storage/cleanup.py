@@ -1,4 +1,4 @@
-"""Fail-closed, file-only guided cleanup through the Windows Recycle Bin."""
+"""Fail-closed guided cleanup through the Windows Recycle Bin."""
 
 from __future__ import annotations
 
@@ -15,8 +15,14 @@ from typing import Any
 from jsonschema import Draft202012Validator, FormatChecker
 from jsonschema.exceptions import SchemaError
 
+from .folders import (
+    directory_fingerprint_part,
+    file_fingerprint_part,
+    metadata_tree_fingerprint,
+)
 from .path_policy import ProtectedPathPolicy, is_path_within, is_reparse_point
-from .risk import assess_removal_risk
+from .risk import assess_folder_removal_risk, assess_removal_risk
+from .windows_metadata import get_allocated_size
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CLEANUP_SCHEMA_PATH = PROJECT_ROOT / "schema" / "cleanup-record.schema.json"
@@ -62,6 +68,7 @@ def _result(
 ) -> dict[str, Any]:
     return {
         "candidate_id": candidate["candidate_id"],
+        "item_type": candidate.get("item_type", "file"),
         "path": candidate["path"],
         "expected_size_bytes": candidate["size_bytes"],
         "expected_modified_at_utc": candidate["modified_at_utc"],
@@ -111,6 +118,8 @@ def revalidate_candidate(
             "skipped_protected_or_invalid",
             "The report marks this entry as review-only, protected, or unavailable.",
         )
+    if candidate.get("item_type", "file") == "folder":
+        return _revalidate_folder_candidate(report, candidate)
     if not candidate["is_regular_file"] or candidate["is_reparse_point"]:
         return None, _result(
             candidate,
@@ -204,8 +213,260 @@ def revalidate_candidate(
     return path, None
 
 
+def _folder_tree_snapshot(
+    path: Path, *, development_cache: bool = False
+) -> dict[str, Any]:
+    """Re-read every descendant metadata record without opening file contents."""
+
+    root_metadata = os.lstat(path)
+    if not stat.S_ISDIR(root_metadata.st_mode) or is_reparse_point(
+        path, root_metadata
+    ):
+        raise ValueError("The reviewed path is not a regular directory tree.")
+
+    risk_attributes = ("development_cache",) if development_cache else ()
+
+    def visit(directory: Path, metadata: os.stat_result) -> dict[str, Any]:
+        file_count = 0
+        directory_count = 0
+        logical_bytes = 0
+        allocated_bytes = 0
+        newest_modified: datetime | None = None
+        oldest_modified: datetime | None = None
+        contains_high_risk_items = False
+        fingerprint_parts: list[str] = []
+
+        with os.scandir(directory) as iterator:
+            entries = sorted(iterator, key=lambda entry: entry.name.casefold())
+        for entry in entries:
+            child = Path(entry.path)
+            child_metadata = entry.stat(follow_symlinks=False)
+            if is_reparse_point(child, child_metadata):
+                raise ValueError(
+                    "A reparse point appeared inside the reviewed directory tree."
+                )
+            if stat.S_ISDIR(child_metadata.st_mode):
+                directory_count += 1
+                child_snapshot = visit(child, child_metadata)
+                file_count += child_snapshot["file_count"]
+                directory_count += child_snapshot["directory_count"]
+                logical_bytes += child_snapshot["size_bytes"]
+                allocated_bytes += child_snapshot["allocated_size_bytes"]
+                contains_high_risk_items = (
+                    contains_high_risk_items
+                    or child_snapshot["contains_high_risk_items"]
+                    or assess_folder_removal_risk(
+                        child, risk_attributes
+                    ).level
+                    == "high"
+                )
+                child_newest = child_snapshot[
+                    "newest_descendant_modified_at_utc"
+                ]
+                child_oldest = child_snapshot[
+                    "oldest_descendant_modified_at_utc"
+                ]
+                if child_newest is not None and (
+                    newest_modified is None or child_newest > newest_modified
+                ):
+                    newest_modified = child_newest
+                if child_oldest is not None and (
+                    oldest_modified is None or child_oldest < oldest_modified
+                ):
+                    oldest_modified = child_oldest
+                fingerprint_parts.append(
+                    directory_fingerprint_part(
+                        entry.name,
+                        child_snapshot["tree_metadata_fingerprint"],
+                    )
+                )
+                continue
+            if not stat.S_ISREG(child_metadata.st_mode):
+                continue
+            file_count += 1
+            size_bytes = max(0, int(child_metadata.st_size))
+            allocated_size = get_allocated_size(child, size_bytes)
+            logical_bytes += size_bytes
+            allocated_bytes += allocated_size
+            contains_high_risk_items = (
+                contains_high_risk_items
+                or assess_removal_risk(child, risk_attributes).level == "high"
+            )
+            modified = datetime.fromtimestamp(
+                child_metadata.st_mtime, timezone.utc
+            )
+            if newest_modified is None or modified > newest_modified:
+                newest_modified = modified
+            if oldest_modified is None or modified < oldest_modified:
+                oldest_modified = modified
+            fingerprint_parts.append(
+                file_fingerprint_part(
+                    entry.name,
+                    size_bytes,
+                    allocated_size,
+                    child_metadata.st_mtime_ns,
+                )
+            )
+
+        directory_modified = datetime.fromtimestamp(
+            metadata.st_mtime, timezone.utc
+        )
+        return {
+            "file_count": file_count,
+            "directory_count": directory_count,
+            "size_bytes": logical_bytes,
+            "allocated_size_bytes": allocated_bytes,
+            "modified_at_utc": newest_modified or directory_modified,
+            "newest_descendant_modified_at_utc": newest_modified,
+            "oldest_descendant_modified_at_utc": oldest_modified,
+            "contains_high_risk_items": contains_high_risk_items,
+            "tree_metadata_fingerprint": metadata_tree_fingerprint(
+                fingerprint_parts
+            ),
+        }
+
+    return visit(path, root_metadata)
+
+
+def _revalidate_folder_candidate(
+    report: dict[str, Any], candidate: dict[str, Any]
+) -> tuple[Path | None, dict[str, Any] | None]:
+    if candidate.get("is_directory") is not True or candidate["is_reparse_point"]:
+        return None, _result(
+            candidate,
+            "skipped_protected_or_invalid",
+            "The report does not describe an eligible directory.",
+        )
+
+    path = Path(os.path.abspath(candidate["path"]))
+    drive_letter = report["drive"]["drive_letter"].upper()
+    if path.drive.upper() != drive_letter:
+        return None, _result(
+            candidate,
+            "skipped_protected_or_invalid",
+            "The directory no longer belongs to the analysed drive.",
+        )
+
+    roots = _approved_roots(report)
+    reported_root = Path(os.path.abspath(candidate["scan_root"]))
+    matching_roots = tuple(
+        root
+        for root in roots
+        if os.path.normcase(os.path.abspath(str(root)))
+        == os.path.normcase(os.path.abspath(str(reported_root)))
+        and is_path_within(path, root)
+    )
+    if not matching_roots:
+        return None, _result(
+            candidate,
+            "skipped_protected_or_invalid",
+            "The directory is outside the approved scan roots.",
+        )
+    if os.path.normcase(os.path.abspath(str(path))) == os.path.normcase(
+        os.path.abspath(str(matching_roots[0]))
+    ):
+        return None, _result(
+            candidate,
+            "skipped_protected_or_invalid",
+            "A scan root can never become a folder cleanup candidate.",
+        )
+
+    policy = ProtectedPathPolicy()
+    if policy.is_protected(path, drive_letter):
+        return None, _result(
+            candidate,
+            "skipped_protected_or_invalid",
+            "The directory is now inside a protected Windows or application location.",
+        )
+    current_risk = assess_folder_removal_risk(
+        path, tuple(candidate["attributes"])
+    )
+    if current_risk.eligibility != "eligible":
+        return None, _result(
+            candidate,
+            "skipped_protected_or_invalid",
+            "The current folder-risk policy keeps this directory review-only.",
+        )
+
+    try:
+        if _has_reparse_component(path, matching_roots[0]):
+            return None, _result(
+                candidate,
+                "skipped_protected_or_invalid",
+                "A reparse point or link is present in the reviewed path.",
+            )
+        snapshot = _folder_tree_snapshot(
+            path,
+            development_cache=(
+                "development_cache" in candidate["attributes"]
+            ),
+        )
+    except FileNotFoundError:
+        return None, _result(
+            candidate,
+            "missing",
+            "The directory no longer exists at the reviewed path.",
+        )
+    except ValueError as error:
+        return None, _result(
+            candidate,
+            "skipped_protected_or_invalid",
+            str(error),
+        )
+    except OSError:
+        return None, _result(
+            candidate,
+            "failed",
+            "The complete directory tree could not be revalidated before recycling.",
+        )
+
+    expected_values = {
+        "file_count": candidate.get("file_count"),
+        "directory_count": candidate.get("directory_count"),
+        "size_bytes": candidate.get("size_bytes"),
+        "allocated_size_bytes": candidate.get("allocated_size_bytes"),
+    }
+    for key, expected in expected_values.items():
+        if expected is None or snapshot[key] != expected:
+            return None, _result(
+                candidate,
+                "skipped_changed",
+                "The directory contents changed after the storage report was created.",
+            )
+
+    if snapshot["contains_high_risk_items"]:
+        return None, _result(
+            candidate,
+            "skipped_protected_or_invalid",
+            "The directory now contains high-risk application, configuration, runtime, or save data.",
+        )
+
+    expected_fingerprint = candidate.get("tree_metadata_fingerprint")
+    if (
+        not expected_fingerprint
+        or snapshot["tree_metadata_fingerprint"] != expected_fingerprint
+    ):
+        return None, _result(
+            candidate,
+            "skipped_changed",
+            "The directory tree paths or metadata changed after the storage report was created.",
+        )
+
+    expected_modified = _parse_utc(candidate.get("modified_at_utc"))
+    if candidate.get("file_count", 0) > 0 and (
+        expected_modified is None
+        or snapshot["modified_at_utc"] != expected_modified
+    ):
+        return None, _result(
+            candidate,
+            "skipped_changed",
+            "The newest directory-tree modification time changed after the report was created.",
+        )
+    return path, None
+
+
 def send_to_recycle_bin(path: Path) -> None:
-    """Move one validated file to the OS Recycle Bin with no delete fallback."""
+    """Move one validated file or folder to the Recycle Bin."""
 
     try:
         from send2trash import send2trash
@@ -218,7 +479,7 @@ def send_to_recycle_bin(path: Path) -> None:
         send2trash(str(path))
     except Exception as error:
         raise RecycleUnavailableError(
-            "Windows could not move this file to the Recycle Bin."
+            "Windows could not move this item to the Recycle Bin."
         ) from error
 
 
@@ -229,18 +490,25 @@ def execute_guided_cleanup(
     recycler: Callable[[Path], None] = send_to_recycle_bin,
     clock: Callable[[], datetime] | None = None,
 ) -> dict[str, Any]:
-    """Revalidate and recycle selected files, preserving per-file outcomes."""
+    """Revalidate and recycle selected items, preserving per-item outcomes."""
 
     clock = clock or (lambda: datetime.now(timezone.utc))
     selected = tuple(candidates)
     if not 1 <= len(selected) <= 500:
         raise CleanupRecordError(
-            "A guided cleanup must contain between 1 and 500 files."
+            "A guided cleanup must contain between 1 and 500 items."
         )
     candidate_ids = [candidate["candidate_id"] for candidate in selected]
     if len(candidate_ids) != len(set(candidate_ids)):
         raise CleanupRecordError(
             "A guided cleanup cannot contain duplicate candidate identifiers."
+        )
+    selected_kinds = {
+        candidate.get("item_type", "file") for candidate in selected
+    }
+    if not selected_kinds.issubset({"file", "folder"}) or len(selected_kinds) != 1:
+        raise CleanupRecordError(
+            "A guided cleanup cannot mix file and folder candidates."
         )
     selected_paths = [
         os.path.normcase(os.path.abspath(candidate["path"]))
@@ -250,6 +518,17 @@ def execute_guided_cleanup(
         raise CleanupRecordError(
             "A guided cleanup cannot contain the same reviewed path twice."
         )
+    for index, left in enumerate(selected):
+        left_path = Path(os.path.abspath(left["path"]))
+        for right in selected[index + 1 :]:
+            right_path = Path(os.path.abspath(right["path"]))
+            if (
+                is_path_within(left_path, right_path)
+                or is_path_within(right_path, left_path)
+            ):
+                raise CleanupRecordError(
+                    "A guided cleanup cannot combine overlapping parent and child paths."
+                )
     started_at = clock().astimezone(timezone.utc)
     results: list[dict[str, Any]] = []
 
@@ -266,7 +545,7 @@ def execute_guided_cleanup(
                 _result(
                     candidate,
                     "failed",
-                    "Windows could not move this file to the Recycle Bin; it was not permanently deleted.",
+                    "Windows could not move this item to the Recycle Bin; it was not permanently deleted.",
                 )
             )
             continue
@@ -274,7 +553,7 @@ def execute_guided_cleanup(
             _result(
                 candidate,
                 "recycled",
-                "Windows accepted the file for the Recycle Bin.",
+                "Windows accepted the item for the Recycle Bin.",
             )
         )
 
@@ -302,7 +581,10 @@ def execute_guided_cleanup(
         "safety": {
             "action": "windows_recycle_bin_only",
             "permanent_delete_fallback": False,
-            "directories_allowed": False,
+            "directories_allowed": any(
+                candidate.get("item_type", "file") == "folder"
+                for candidate in selected
+            ),
         },
     }
 

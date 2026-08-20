@@ -356,11 +356,13 @@ def test_large_candidate_set_keeps_aggregate_totals_when_details_are_bounded(
     assert report["candidate_summary"]["omitted_candidates"] == 225
 
 
-def test_bounded_candidates_retain_higher_value_records(tmp_path: Path) -> None:
+def test_bounded_candidates_retain_largest_physical_records_first(
+    tmp_path: Path,
+) -> None:
     root = tmp_path / "Downloads"
     root.mkdir()
     stale = root / "a-stale.bin"
-    stale.write_bytes(b"ordinary stale file")
+    stale.write_bytes(b"ordinary stale file that is physically larger")
     incomplete = root / "z-download.part"
     incomplete.write_bytes(b"partial")
     old = datetime(2020, 1, 1, tzinfo=timezone.utc)
@@ -377,8 +379,55 @@ def test_bounded_candidates_retain_higher_value_records(tmp_path: Path) -> None:
 
     validate_storage_report(report)
     assert report["candidate_summary"]["total_unique_candidates"] == 2
+    assert report["candidates"][0]["name"] == "a-stale.bin"
+    assert report["candidates"][0]["allocated_size_bytes"] == len(
+        b"ordinary stale file that is physically larger"
+    )
+
+
+def test_bounded_candidate_size_ties_use_safety_and_evidence(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "Downloads"
+    root.mkdir()
+    stale = root / "a-stale.bin"
+    stale.write_bytes(b"1234567")
+    incomplete = root / "z-download.part"
+    incomplete.write_bytes(b"1234567")
+    old = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    set_modified_time(stale, old)
+    set_modified_time(incomplete, old)
+
+    report = make_scanner().scan(
+        [root],
+        options=ScannerOptions(
+            maximum_candidates_retained=1,
+            discover_development_insights=False,
+        ),
+    )
+
+    validate_storage_report(report)
     assert report["candidates"][0]["name"] == "z-download.part"
     assert report["candidates"][0]["removal_risk"] == "low"
+
+
+def test_hash_length_extension_remains_valid_report_metadata(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "Cache"
+    root.mkdir()
+    hash_suffix = "8aa3f8beea3f8dfb32ecd478c874ca438d2eb07f78decf5b0a7121c3557c45ed"
+    candidate = root / f"entry.{hash_suffix}"
+    candidate.write_bytes(b"fictional cache payload")
+    set_modified_time(candidate, datetime(2020, 1, 1, tzinfo=timezone.utc))
+
+    report = make_scanner().scan(
+        [root],
+        options=ScannerOptions(discover_development_insights=False),
+    )
+
+    validate_storage_report(report)
+    assert report["candidates"][0]["extension"] == f".{hash_suffix}"
 
 
 def test_installer_candidate_is_high_risk_and_review_only(tmp_path: Path) -> None:
@@ -642,3 +691,174 @@ def test_validated_report_is_written_as_utf8_and_not_overwritten(
     assert loaded["report_type"] == "storage_analysis"
     with pytest.raises(StorageReportWriteError, match="already exists"):
         write_storage_report(report, output)
+
+
+def test_folder_candidates_aggregate_descendant_metadata_once(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "Downloads"
+    old_folder = root / "OldGame" / "Saves"
+    old_folder.mkdir(parents=True)
+    first = old_folder / "slot-one.dat"
+    second = old_folder / "slot-two.dat"
+    first.write_bytes(b"first")
+    second.write_bytes(b"second")
+    old_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    set_modified_time(first, old_time)
+    set_modified_time(second, old_time)
+
+    report = make_scanner().scan(
+        [root],
+        options=ScannerOptions(
+            classification=ClassificationOptions(
+                stale_after_days=365,
+                large_file_threshold_bytes=1000,
+                incomplete_min_age_hours=1,
+                temporary_min_age_hours=1,
+            )
+        ),
+    )
+
+    validate_storage_report(report)
+    old_game = next(
+        candidate
+        for candidate in report["folder_candidates"]
+        if candidate["name"] == "OldGame"
+    )
+    assert old_game["item_type"] == "folder"
+    assert old_game["file_count"] == 2
+    assert old_game["directory_count"] == 1
+    assert old_game["size_bytes"] == 11
+    assert old_game["allocated_size_bytes"] == 11
+    assert old_game["attributes"] == ["stale"]
+    assert old_game["contains_high_risk_items"] is True
+    assert old_game["protection"]["eligibility"] == "review_only"
+    assert len(old_game["tree_metadata_fingerprint"]) == 64
+
+
+def test_nested_empty_directories_collapse_to_highest_useful_ancestor(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "Downloads"
+    deepest = root / "Cyberpunk" / "gamedata" / "temp" / "dlc"
+    deepest.mkdir(parents=True)
+
+    report = make_scanner().scan([root])
+
+    validate_storage_report(report)
+    empty_paths = [
+        Path(candidate["path"])
+        for candidate in report["folder_candidates"]
+        if "empty" in candidate["attributes"]
+    ]
+    assert empty_paths == [root / "Cyberpunk"]
+
+
+def test_unavailable_folder_state_overrides_high_risk_descendant_state(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "Downloads"
+    archive = root / "OldArchive"
+    archive.mkdir(parents=True)
+    old_file = archive / "notes.txt"
+    old_file.write_text("fictional notes", encoding="utf-8")
+    set_modified_time(old_file, datetime(2020, 1, 1, tzinfo=timezone.utc))
+    reparse_like = archive / "linked-location"
+    reparse_like.write_text("synthetic reparse metadata", encoding="utf-8")
+    monkeypatch.setattr(
+        "storage.scanner.is_reparse_point",
+        lambda path, _metadata: path == reparse_like,
+    )
+
+    report = make_scanner().scan(
+        [root],
+        options=ScannerOptions(discover_development_insights=False),
+    )
+
+    validate_storage_report(report)
+    folder = next(
+        candidate
+        for candidate in report["folder_candidates"]
+        if candidate["name"] == "OldArchive"
+    )
+    assert folder["contains_unavailable_items"] is True
+    assert folder["contains_high_risk_items"] is True
+    assert folder["protection"]["eligibility"] == "unavailable"
+    assert folder["removal_risk"] == "protected"
+
+
+def test_folder_is_stale_only_when_every_descendant_is_old(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "Downloads"
+    mixed = root / "MixedAge"
+    mixed.mkdir(parents=True)
+    old_file = mixed / "old.txt"
+    recent_file = mixed / "recent.txt"
+    old_file.write_text("old", encoding="utf-8")
+    recent_file.write_text("recent", encoding="utf-8")
+    set_modified_time(old_file, datetime(2020, 1, 1, tzinfo=timezone.utc))
+    set_modified_time(recent_file, datetime(2026, 7, 24, tzinfo=timezone.utc))
+
+    report = make_scanner().scan(
+        [root],
+        options=ScannerOptions(
+            classification=ClassificationOptions(
+                stale_after_days=365,
+                large_file_threshold_bytes=1000,
+                incomplete_min_age_hours=1,
+                temporary_min_age_hours=1,
+            )
+        ),
+    )
+
+    assert all(
+        candidate["name"] != "MixedAge"
+        for candidate in report["folder_candidates"]
+    )
+
+
+def test_large_only_folder_is_visible_but_review_only(tmp_path: Path) -> None:
+    root = tmp_path / "Downloads"
+    large_folder = root / "RecentProject"
+    large_folder.mkdir(parents=True)
+    (large_folder / "payload.bin").write_bytes(b"large")
+
+    report = make_scanner().scan(
+        [root],
+        options=ScannerOptions(
+            classification=ClassificationOptions(
+                stale_after_days=365,
+                large_file_threshold_bytes=1,
+                incomplete_min_age_hours=1,
+                temporary_min_age_hours=1,
+            )
+        ),
+    )
+
+    candidate = next(
+        item
+        for item in report["folder_candidates"]
+        if item["name"] == "RecentProject"
+    )
+    assert candidate["attributes"] == ["large"]
+    assert candidate["removal_risk"] == "high"
+    assert candidate["protection"]["eligibility"] == "review_only"
+
+
+def test_recent_incomplete_folder_name_waits_for_age_threshold(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "Downloads"
+    partial = root / "active.download"
+    partial.mkdir(parents=True)
+
+    report = make_scanner().scan([root])
+
+    candidate = next(
+        item
+        for item in report["folder_candidates"]
+        if item["name"] == "active.download"
+    )
+    assert "likely_incomplete" not in candidate["attributes"]

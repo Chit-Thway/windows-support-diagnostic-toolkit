@@ -178,6 +178,10 @@ def _validate_semantics(report: dict[str, Any]) -> None:
         attribute: 0 for attribute in summary["attributes"]
     }
     for candidate in candidates:
+        if candidate.get("item_type", "file") != "file":
+            raise StorageReportValidationError(
+                "The candidates collection can contain files only."
+            )
         attributes = set(candidate["attributes"])
         evidence_attributes = {
             evidence["attribute"] for evidence in candidate["evidence"]
@@ -266,6 +270,157 @@ def _validate_semantics(report: dict[str, Any]) -> None:
             ]:
                 raise StorageReportValidationError(
                     f"Attribute bytes for {attribute} do not match candidates."
+                )
+
+    folder_candidates = report.get("folder_candidates", [])
+    folder_summary = report.get("folder_candidate_summary")
+    if folder_candidates and folder_summary is None:
+        raise StorageReportValidationError(
+            "Folder candidates require a folder_candidate_summary."
+        )
+    if folder_summary is not None:
+        folder_ids = [
+            candidate["candidate_id"] for candidate in folder_candidates
+        ]
+        if len(folder_ids) != len(set(folder_ids)):
+            raise StorageReportValidationError(
+                "Retained folder candidate_id values must be unique."
+            )
+        if set(folder_ids).intersection(candidate_ids):
+            raise StorageReportValidationError(
+                "File and folder candidate identifiers must not overlap."
+            )
+        folder_paths = [
+            os.path.normcase(os.path.abspath(candidate["path"]))
+            for candidate in folder_candidates
+        ]
+        if len(folder_paths) != len(set(folder_paths)):
+            raise StorageReportValidationError(
+                "Retained folder candidate paths must be unique."
+            )
+        if folder_summary["retained_candidates"] != len(folder_candidates):
+            raise StorageReportValidationError(
+                "Folder retained_candidates does not match the folder rows."
+            )
+        if folder_summary["total_candidates"] != (
+            folder_summary["retained_candidates"]
+            + folder_summary["omitted_candidates"]
+        ):
+            raise StorageReportValidationError(
+                "Total folder candidates must equal retained plus omitted."
+            )
+        if "folder_candidate_details_retained" in scan and (
+            scan["folder_candidate_details_retained"]
+            != folder_summary["retained_candidates"]
+            or scan.get("folder_candidate_details_omitted")
+            != folder_summary["omitted_candidates"]
+        ):
+            raise StorageReportValidationError(
+                "Scan and folder-summary detail counts do not match."
+            )
+
+        retained_folder_counts = {
+            attribute: 0 for attribute in folder_summary["attributes"]
+        }
+        retained_folder_bytes = {
+            attribute: 0 for attribute in folder_summary["attributes"]
+        }
+        for candidate in folder_candidates:
+            if candidate.get("item_type") != "folder":
+                raise StorageReportValidationError(
+                    "Folder candidates must declare item_type folder."
+                )
+            if candidate.get("is_directory") is not True:
+                raise StorageReportValidationError(
+                    "Folder candidates must describe directories."
+                )
+            if candidate["is_regular_file"] or candidate["is_reparse_point"]:
+                raise StorageReportValidationError(
+                    "Folder candidates cannot be regular files or reparse points."
+                )
+            attributes = set(candidate["attributes"])
+            evidence_attributes = {
+                evidence["attribute"] for evidence in candidate["evidence"]
+            }
+            if attributes != evidence_attributes:
+                raise StorageReportValidationError(
+                    f"Folder candidate {candidate['candidate_id']} must contain "
+                    "evidence for exactly its listed attributes."
+                )
+            eligibility = candidate["protection"]["eligibility"]
+            removal_risk = candidate.get("removal_risk", "protected")
+            if eligibility == "eligible" and removal_risk in {
+                "high",
+                "protected",
+            }:
+                raise StorageReportValidationError(
+                    "High-risk folders cannot be cleanup eligible."
+                )
+            if eligibility == "review_only" and removal_risk != "high":
+                raise StorageReportValidationError(
+                    "Review-only folders must carry high removal risk."
+                )
+            if eligibility == "unavailable" and (
+                "unavailable" not in attributes
+                or removal_risk != "protected"
+            ):
+                raise StorageReportValidationError(
+                    "Unavailable folders require unavailable evidence and protected risk."
+                )
+            if candidate.get("contains_unavailable_items") and (
+                eligibility != "unavailable"
+            ):
+                raise StorageReportValidationError(
+                    "Folders with unavailable descendants cannot be selectable."
+                )
+            if (
+                candidate.get("contains_high_risk_items")
+                and not candidate.get("contains_unavailable_items")
+                and (
+                    eligibility != "review_only" or removal_risk != "high"
+                )
+            ):
+                raise StorageReportValidationError(
+                    "Folders with high-risk descendants must remain review-only."
+                )
+            if not candidate.get("tree_metadata_fingerprint"):
+                raise StorageReportValidationError(
+                    "Folder candidates require a metadata tree fingerprint."
+                )
+            for attribute in attributes:
+                retained_folder_counts[attribute] += 1
+                retained_folder_bytes[attribute] += (
+                    candidate.get("allocated_size_bytes") or 0
+                )
+
+        retained_largest = max(
+            (
+                candidate.get("allocated_size_bytes") or 0
+                for candidate in folder_candidates
+            ),
+            default=0,
+        )
+        if folder_summary["largest_candidate_allocated_bytes"] < retained_largest:
+            raise StorageReportValidationError(
+                "Largest folder candidate size understates retained rows."
+            )
+        for attribute, attribute_summary in folder_summary["attributes"].items():
+            if attribute_summary["candidate_count"] < retained_folder_counts[
+                attribute
+            ] or attribute_summary["overlapping_bytes"] < retained_folder_bytes[
+                attribute
+            ]:
+                raise StorageReportValidationError(
+                    f"Folder attribute summary for {attribute} understates retained rows."
+                )
+            if folder_summary["omitted_candidates"] == 0 and (
+                attribute_summary["candidate_count"]
+                != retained_folder_counts[attribute]
+                or attribute_summary["overlapping_bytes"]
+                != retained_folder_bytes[attribute]
+            ):
+                raise StorageReportValidationError(
+                    f"Folder attribute summary for {attribute} does not match rows."
                 )
 
     development = report.get("development_insights")

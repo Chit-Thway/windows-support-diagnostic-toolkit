@@ -9,6 +9,9 @@
     const form = explorer.querySelector("[data-filter-form]");
     const rowsContainer = explorer.querySelector("[data-candidate-rows]");
     const rows = Array.from(explorer.querySelectorAll("[data-candidate-row]"));
+    const rowById = new Map(
+        rows.map((row) => [row.dataset.candidateId, row])
+    );
     const emptyState = explorer.querySelector("[data-filter-empty]");
     const resultSummary = explorer.querySelector("[data-result-summary]");
     const actionFeedback = explorer.querySelector("[data-action-feedback]");
@@ -22,11 +25,17 @@
     const previousButton = explorer.querySelector("[data-page-previous]");
     const nextButton = explorer.querySelector("[data-page-next]");
     const pageStatus = explorer.querySelector("[data-page-status]");
+    const modeButtons = Array.from(document.querySelectorAll("[data-candidate-mode]"));
+    const summaryPanels = Array.from(document.querySelectorAll("[data-candidate-summary]"));
+    const modeHeading = explorer.querySelector("[data-mode-heading]");
+    const itemHeading = explorer.querySelector("[data-item-heading]");
+    const fileOnlyFilter = explorer.querySelector("[data-file-only-filter]");
     const pageSize = Number(explorer.dataset.pageSize) || 25;
     const selectedIds = new Set();
     let filteredRows = [];
     let visibleRows = [];
     let currentPage = 1;
+    let activeMode = "file";
 
     const confidenceOrder = {high: 0, medium: 1, low: 2};
 
@@ -62,6 +71,9 @@
     }
 
     function rowMatches(row) {
+        if (row.dataset.candidateKind !== activeMode) {
+            return false;
+        }
         const attributes = new Set(
             row.dataset.attributes.split(",").filter(Boolean)
         );
@@ -98,7 +110,7 @@
         }
 
         const extension = normalizedExtension(form.elements.extension.value);
-        if (extension && row.dataset.extension !== extension) {
+        if (activeMode === "file" && extension && row.dataset.extension !== extension) {
             return false;
         }
 
@@ -152,12 +164,38 @@
         return left.dataset.candidateId.localeCompare(right.dataset.candidateId);
     }
 
+    function normalizedPath(value) {
+        return value.replaceAll("/", "\\").replace(/\\+$/, "").toLowerCase();
+    }
+
+    function pathsOverlap(left, right) {
+        const normalizedLeft = normalizedPath(left);
+        const normalizedRight = normalizedPath(right);
+        return (
+            normalizedLeft === normalizedRight ||
+            normalizedLeft.startsWith(`${normalizedRight}\\`) ||
+            normalizedRight.startsWith(`${normalizedLeft}\\`)
+        );
+    }
+
     function updateSelectionSummary() {
         let totalBytes = 0;
         rows.forEach((row) => {
             const checkbox = row.querySelector("[data-candidate-select]");
             const selected = selectedIds.has(row.dataset.candidateId);
             checkbox.checked = selected;
+            const overlapsSelection =
+                activeMode === "folder" &&
+                !selected &&
+                Array.from(selectedIds).some((selectedId) => {
+                    const selectedRow = rowById.get(selectedId);
+                    return selectedRow && pathsOverlap(
+                        selectedRow.dataset.candidatePath,
+                        row.dataset.candidatePath
+                    );
+                });
+            checkbox.disabled =
+                row.dataset.selectable !== "true" || overlapsSelection;
             if (selected) {
                 totalBytes += Number(row.dataset.sizeBytes);
             }
@@ -192,12 +230,15 @@
         previousButton.disabled = currentPage <= 1;
         nextButton.disabled = currentPage >= pageCount;
         pageStatus.textContent = `Page ${currentPage} of ${pageCount}`;
+        const modeRows = rows.filter(
+            (row) => row.dataset.candidateKind === activeMode
+        );
         resultSummary.textContent =
             filteredRows.length === 0
-                ? `0 of ${rows.length} retained candidates match.`
+                ? `0 of ${modeRows.length} retained ${activeMode} candidates match.`
                 : `Showing ${start + 1}–${end} of ${filteredRows.length} matching ` +
                   `candidate${filteredRows.length === 1 ? "" : "s"} ` +
-                  `(${rows.length} retained total).`;
+                  `(${modeRows.length} retained ${activeMode} total).`;
         updateSelectionSummary();
     }
 
@@ -206,6 +247,27 @@
         filteredRows.forEach((row) => rowsContainer.append(row));
         currentPage = 1;
         renderPage();
+    }
+
+    function setMode(mode) {
+        if (mode !== "file" && mode !== "folder") {
+            return;
+        }
+        activeMode = mode;
+        selectedIds.clear();
+        modeButtons.forEach((button) => {
+            const active = button.dataset.candidateMode === mode;
+            button.classList.toggle("is-active", active);
+            button.setAttribute("aria-pressed", String(active));
+        });
+        summaryPanels.forEach((panel) => {
+            panel.hidden = panel.dataset.candidateSummary !== mode;
+        });
+        modeHeading.textContent = mode === "folder" ? "Folder" : "File";
+        itemHeading.textContent = mode === "folder" ? "Folder" : "File";
+        fileOnlyFilter.hidden = mode === "folder";
+        form.elements.extension.disabled = mode === "folder";
+        applyFilters();
     }
 
     async function copyText(value) {
@@ -241,6 +303,24 @@
         const checkbox = row.querySelector("[data-candidate-select]");
         checkbox.addEventListener("change", () => {
             if (checkbox.checked && !checkbox.disabled) {
+                const overlap =
+                    activeMode === "folder" &&
+                    Array.from(selectedIds).some((selectedId) => {
+                        const selectedRow = rowById.get(selectedId);
+                        return selectedRow && pathsOverlap(
+                            selectedRow.dataset.candidatePath,
+                            row.dataset.candidatePath
+                        );
+                    });
+                if (overlap) {
+                    checkbox.checked = false;
+                    setFeedback(
+                        "A parent and child folder cannot be selected together.",
+                        true
+                    );
+                    updateSelectionSummary();
+                    return;
+                }
                 selectedIds.add(row.dataset.candidateId);
             } else {
                 selectedIds.delete(row.dataset.candidateId);
@@ -263,6 +343,7 @@
             setFeedback(`Opening the folder containing ${row.dataset.candidateName}…`);
             const body = new URLSearchParams({
                 candidate_id: row.dataset.candidateId,
+                candidate_kind: row.dataset.candidateKind,
                 action_token: openButton.dataset.actionToken,
             });
             try {
@@ -285,7 +366,16 @@
     selectVisibleButton.addEventListener("click", () => {
         visibleRows.forEach((row) => {
             const checkbox = row.querySelector("[data-candidate-select]");
-            if (!checkbox.disabled) {
+            const overlapsSelected =
+                activeMode === "folder" &&
+                Array.from(selectedIds).some((selectedId) => {
+                    const selectedRow = rowById.get(selectedId);
+                    return selectedRow && pathsOverlap(
+                        selectedRow.dataset.candidatePath,
+                        row.dataset.candidatePath
+                    );
+                });
+            if (!checkbox.disabled && !overlapsSelected) {
                 selectedIds.add(row.dataset.candidateId);
             }
         });
@@ -313,6 +403,7 @@
             .sort((left, right) => left.dataset.pathSort.localeCompare(right.dataset.pathSort))
             .map((row) => ({
                 candidate_id: row.dataset.candidateId,
+                item_type: row.dataset.candidateKind,
                 path: row.dataset.candidatePath,
                 size_bytes: Number(row.dataset.logicalSizeBytes),
                 allocated_size_bytes:
@@ -327,7 +418,7 @@
             schema_version: "1.0.0",
             plan_type: "storage_cleanup_review",
             created_at_utc: new Date().toISOString(),
-            action: "review_only_no_files_modified",
+            action: "review_only_no_items_modified",
             selected_count: candidates.length,
             selected_unique_bytes: candidates.reduce(
                 (total, candidate) => total + candidate.size_bytes,
@@ -346,7 +437,7 @@
         download.click();
         download.remove();
         URL.revokeObjectURL(url);
-        setFeedback("Exported a local review-only cleanup plan. No files were changed.");
+        setFeedback("Exported a local review-only cleanup plan. No items were changed.");
     });
 
     reviewCleanupButton.addEventListener("click", () => {
@@ -362,6 +453,12 @@
         actionToken.name = "action_token";
         actionToken.value = reviewCleanupButton.dataset.actionToken;
         previewForm.append(actionToken);
+
+        const candidateKind = document.createElement("input");
+        candidateKind.type = "hidden";
+        candidateKind.name = "candidate_kind";
+        candidateKind.value = activeMode;
+        previewForm.append(candidateKind);
 
         rows
             .filter((row) => selectedIds.has(row.dataset.candidateId))
@@ -380,5 +477,13 @@
         previewForm.submit();
     });
 
-    applyFilters();
+    modeButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            if (!button.disabled) {
+                setMode(button.dataset.candidateMode);
+            }
+        });
+    });
+
+    setMode("file");
 })();

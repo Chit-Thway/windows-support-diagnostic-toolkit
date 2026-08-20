@@ -11,8 +11,8 @@
     <a class="skip-link" href="#main-content">Skip to cleanup results</a>
     <header class="site-header storage-header">
         <div class="shell header-layout">
-            <div><p class="eyebrow">Guided cleanup · results</p><h1>Recycle Bin action finished</h1><p class="header-copy">Every requested file has an individual outcome below.</p></div>
-            <dl class="report-meta"><div><dt>Drive</dt><dd>{{ drive }}</dd></div><div><dt>Requested</dt><dd>{{ record.requested_count }} files</dd></div><div><dt>Reviewed size</dt><dd>{{ requested_size }}</dd></div></dl>
+            <div><p class="eyebrow">Guided cleanup · results</p><h1>Recycle Bin action finished</h1><p class="header-copy">Every requested item has an individual outcome below.</p></div>
+            <dl class="report-meta"><div><dt>Drive</dt><dd>{{ drive }}</dd></div><div><dt>Requested</dt><dd>{{ record.requested_count }} items</dd></div><div><dt>Reviewed size</dt><dd>{{ requested_size }}</dd></div></dl>
         </div>
     </header>
 
@@ -32,7 +32,7 @@
         </section>
 
         <section aria-labelledby="results-heading">
-            <div class="section-heading"><div><p class="eyebrow">Per-file audit</p><h2 id="results-heading">Detailed results</h2></div></div>
+            <div class="section-heading"><div><p class="eyebrow">Per-item audit</p><h2 id="results-heading">Detailed results</h2></div></div>
             <ol class="cleanup-result-list">
                 {% for result in record.results %}
                     <li class="panel status-panel cleanup-result status-{{ result.status }}">
@@ -43,7 +43,7 @@
             </ol>
         </section>
 
-        <section class="panel cleanup-warning"><h2>Recovery reminder</h2><p>Files reported as recycled are now managed by Windows. Check the Recycle Bin promptly if you need to restore one. No permanent-delete fallback was used.</p></section>
+        <section class="panel cleanup-warning"><h2>Recovery reminder</h2><p>Items reported as recycled are now managed by Windows. Check the Recycle Bin promptly if you need to restore one. No permanent-delete fallback was used.</p></section>
     </main>
 </body>
 </html>

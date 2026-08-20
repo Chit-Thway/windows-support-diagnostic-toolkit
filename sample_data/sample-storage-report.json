@@ -20,7 +20,9 @@
     "bytes_examined": 68000000000,
     "allocated_bytes_examined": 64000000000,
     "candidate_details_retained": 1,
-    "candidate_details_omitted": 0
+    "candidate_details_omitted": 0,
+    "folder_candidate_details_retained": 2,
+    "folder_candidate_details_omitted": 0
   },
   "drive": {
     "drive_letter": "C:",
@@ -52,6 +54,7 @@
       "incomplete_min_age_hours": 24,
       "temporary_min_age_hours": 168,
       "maximum_candidates_retained": 5000,
+      "maximum_folder_candidates_retained": 2000,
       "use_last_access_as_classification_evidence": false
     }
   },
@@ -137,7 +140,8 @@
   "candidates": [
     {
       "candidate_id": "sample-001",
-      "path": "C:\\Users\\fictional.jamie\\Downloads\\fictional-archive.iso.part",
+      "item_type": "file",
+      "path": "C:\\Users\\fictional.jamie\\Downloads\\Archive\\fictional-archive.iso.part",
       "scan_root": "C:\\Users\\fictional.jamie\\Downloads",
       "name": "fictional-archive.iso.part",
       "extension": ".part",
@@ -181,7 +185,93 @@
         "explanation": "The fictional regular file is inside an approved scan root."
       },
       "is_regular_file": true,
+      "is_directory": false,
       "is_reparse_point": false
+    }
+  ],
+  "folder_candidate_summary": {
+    "accounting_method": "overlapping_hierarchy",
+    "total_candidates": 2,
+    "retained_candidates": 2,
+    "omitted_candidates": 0,
+    "largest_candidate_allocated_bytes": 6000000000,
+    "attributes": {
+      "stale": {"candidate_count": 1, "overlapping_bytes": 6000000000},
+      "likely_incomplete": {"candidate_count": 1, "overlapping_bytes": 6000000000},
+      "large": {"candidate_count": 1, "overlapping_bytes": 6000000000},
+      "empty": {"candidate_count": 1, "overlapping_bytes": 0},
+      "temporary": {"candidate_count": 0, "overlapping_bytes": 0},
+      "development_cache": {"candidate_count": 0, "overlapping_bytes": 0},
+      "protected": {"candidate_count": 0, "overlapping_bytes": 0},
+      "unavailable": {"candidate_count": 0, "overlapping_bytes": 0}
+    }
+  },
+  "folder_candidates": [
+    {
+      "candidate_id": "folder-sample-001",
+      "item_type": "folder",
+      "path": "C:\\Users\\fictional.jamie\\Downloads\\Archive",
+      "scan_root": "C:\\Users\\fictional.jamie\\Downloads",
+      "name": "Archive",
+      "extension": null,
+      "size_bytes": 6000000000,
+      "allocated_size_bytes": 6000000000,
+      "created_at_utc": "2022-03-04T02:00:00Z",
+      "modified_at_utc": "2022-03-04T02:30:00Z",
+      "last_accessed_at_utc": null,
+      "last_access_reliability": "unavailable",
+      "storage_category": "user_content",
+      "attributes": ["stale", "likely_incomplete", "large"],
+      "evidence": [
+        {"attribute": "stale", "code": "newest_descendant_before_stale_cutoff", "description": "Every fictional file in this directory tree is older than the stale threshold.", "observed_value": "2022-03-04T02:30:00Z"},
+        {"attribute": "likely_incomplete", "code": "incomplete_directory_tree", "description": "Every fictional file carries incomplete-download evidence.", "observed_value": 1},
+        {"attribute": "large", "code": "folder_size_at_or_above_threshold", "description": "The fictional directory tree exceeds the large-item threshold.", "observed_value": 6000000000}
+      ],
+      "confidence": "high",
+      "removal_risk": "low",
+      "protection": {"eligibility": "eligible", "reason_code": null, "explanation": "The fictional folder has strong incomplete-tree evidence and remains user-controlled."},
+      "is_regular_file": false,
+      "is_directory": true,
+      "is_reparse_point": false,
+      "file_count": 1,
+      "directory_count": 0,
+      "newest_descendant_modified_at_utc": "2022-03-04T02:30:00Z",
+      "oldest_descendant_modified_at_utc": "2022-03-04T02:30:00Z",
+      "contains_unavailable_items": false,
+      "contains_high_risk_items": false,
+      "tree_metadata_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "candidate_id": "folder-sample-002",
+      "item_type": "folder",
+      "path": "C:\\Users\\fictional.jamie\\Downloads\\Old Empty",
+      "scan_root": "C:\\Users\\fictional.jamie\\Downloads",
+      "name": "Old Empty",
+      "extension": null,
+      "size_bytes": 0,
+      "allocated_size_bytes": 0,
+      "created_at_utc": "2021-01-01T00:00:00Z",
+      "modified_at_utc": "2021-01-01T00:00:00Z",
+      "last_accessed_at_utc": null,
+      "last_access_reliability": "unavailable",
+      "storage_category": "user_content",
+      "attributes": ["empty"],
+      "evidence": [
+        {"attribute": "empty", "code": "empty_directory_tree", "description": "No regular files exist in this fictional directory tree.", "observed_value": 0}
+      ],
+      "confidence": "high",
+      "removal_risk": "low",
+      "protection": {"eligibility": "eligible", "reason_code": null, "explanation": "The fictional directory tree is empty and outside protected locations."},
+      "is_regular_file": false,
+      "is_directory": true,
+      "is_reparse_point": false,
+      "file_count": 0,
+      "directory_count": 2,
+      "newest_descendant_modified_at_utc": null,
+      "oldest_descendant_modified_at_utc": null,
+      "contains_unavailable_items": false,
+      "contains_high_risk_items": false,
+      "tree_metadata_fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     }
   ],
   "inaccessible_paths": [],

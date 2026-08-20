@@ -10,11 +10,13 @@ import pytest
 
 from storage.cleanup import (
     CleanupRecordError,
+    _folder_tree_snapshot,
     execute_guided_cleanup,
     revalidate_candidate,
     validate_cleanup_record,
     write_cleanup_record,
 )
+from storage.scanner import ScannerOptions, StorageScanner
 
 
 def utc_timestamp(path: Path) -> str:
@@ -325,3 +327,210 @@ def test_cleanup_module_has_no_permanent_delete_or_directory_remove_calls() -> N
     }
 
     assert discovered.isdisjoint(prohibited_attributes)
+
+
+def build_empty_folder_candidate(tmp_path: Path, name: str = "Old Empty"):
+    folder = tmp_path / name
+    folder.mkdir()
+    snapshot = _folder_tree_snapshot(folder)
+    candidate = {
+        "candidate_id": "folder-cleanup-001",
+        "item_type": "folder",
+        "path": str(folder),
+        "scan_root": str(tmp_path),
+        "name": folder.name,
+        "extension": None,
+        "size_bytes": 0,
+        "allocated_size_bytes": 0,
+        "created_at_utc": utc_timestamp(folder),
+        "modified_at_utc": utc_timestamp(folder),
+        "last_accessed_at_utc": None,
+        "last_access_reliability": "unavailable",
+        "storage_category": "user_content",
+        "attributes": ["empty"],
+        "evidence": [],
+        "confidence": "high",
+        "removal_risk": "low",
+        "protection": {
+            "eligibility": "eligible",
+            "reason_code": None,
+            "explanation": "Empty test directory inside the approved root.",
+        },
+        "is_regular_file": False,
+        "is_directory": True,
+        "is_reparse_point": False,
+        "file_count": 0,
+        "directory_count": 0,
+        "newest_descendant_modified_at_utc": None,
+        "oldest_descendant_modified_at_utc": None,
+        "contains_unavailable_items": False,
+        "contains_high_risk_items": False,
+        "tree_metadata_fingerprint": snapshot[
+            "tree_metadata_fingerprint"
+        ],
+    }
+    report = {
+        "generated_at_utc": "2026-08-03T00:00:00Z",
+        "drive": {"drive_letter": folder.drive.upper()},
+        "scan_scope": {
+            "roots": [
+                {
+                    "requested_path": str(tmp_path),
+                    "canonical_path": str(tmp_path),
+                }
+            ]
+        },
+    }
+    return report, candidate, folder
+
+
+def refresh_folder_candidate(candidate: dict, folder: Path) -> None:
+    snapshot = _folder_tree_snapshot(folder)
+    candidate.update(
+        size_bytes=snapshot["size_bytes"],
+        allocated_size_bytes=snapshot["allocated_size_bytes"],
+        file_count=snapshot["file_count"],
+        directory_count=snapshot["directory_count"],
+        modified_at_utc=(
+            snapshot["modified_at_utc"].isoformat().replace("+00:00", "Z")
+        ),
+        newest_descendant_modified_at_utc=(
+            snapshot["newest_descendant_modified_at_utc"]
+            .isoformat()
+            .replace("+00:00", "Z")
+            if snapshot["newest_descendant_modified_at_utc"]
+            else None
+        ),
+        oldest_descendant_modified_at_utc=(
+            snapshot["oldest_descendant_modified_at_utc"]
+            .isoformat()
+            .replace("+00:00", "Z")
+            if snapshot["oldest_descendant_modified_at_utc"]
+            else None
+        ),
+        tree_metadata_fingerprint=snapshot["tree_metadata_fingerprint"],
+    )
+
+
+def test_unchanged_empty_folder_can_be_sent_to_supplied_recycler(
+    tmp_path: Path,
+) -> None:
+    report, candidate, folder = build_empty_folder_candidate(tmp_path)
+    recycled: list[Path] = []
+
+    record = execute_guided_cleanup(
+        report,
+        [candidate],
+        recycler=lambda reviewed: recycled.append(reviewed),
+    )
+
+    assert recycled == [folder]
+    assert folder.exists()
+    assert record["results"][0]["item_type"] == "folder"
+    assert record["summary"]["recycled"] == 1
+    assert record["safety"]["directories_allowed"] is True
+    validate_cleanup_record(record)
+
+
+def test_scanner_folder_fingerprint_matches_cleanup_revalidation(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "Downloads"
+    folder = root / "Old Empty"
+    (folder / "nested").mkdir(parents=True)
+    report = StorageScanner().scan(
+        [root],
+        options=ScannerOptions(discover_development_insights=False),
+    )
+    candidate = next(
+        item
+        for item in report["folder_candidates"]
+        if item["name"] == "Old Empty"
+    )
+
+    reviewed, failure = revalidate_candidate(report, candidate)
+
+    assert failure is None, failure["message"]
+    assert reviewed == folder
+
+
+def test_folder_changed_after_report_is_skipped(tmp_path: Path) -> None:
+    report, candidate, folder = build_empty_folder_candidate(tmp_path)
+    (folder / "new-file.txt").write_text("changed", encoding="utf-8")
+    recycled: list[Path] = []
+
+    record = execute_guided_cleanup(
+        report,
+        [candidate],
+        recycler=lambda reviewed: recycled.append(reviewed),
+    )
+
+    assert recycled == []
+    assert record["summary"]["skipped_changed"] == 1
+
+
+def test_same_sized_folder_descendant_rename_is_detected(
+    tmp_path: Path,
+) -> None:
+    report, candidate, folder = build_empty_folder_candidate(
+        tmp_path, "Old Download"
+    )
+    original = folder / "old.part"
+    original.write_bytes(b"same")
+    refresh_folder_candidate(candidate, folder)
+    original_stat = original.stat()
+    replacement = folder / "renamed.part"
+    original.rename(replacement)
+    os.utime(
+        replacement,
+        ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns),
+    )
+
+    record = execute_guided_cleanup(
+        report,
+        [candidate],
+        recycler=lambda _reviewed: pytest.fail("changed tree was recycled"),
+    )
+
+    assert record["summary"]["skipped_changed"] == 1
+
+
+def test_overlapping_parent_and_child_folders_are_rejected(
+    tmp_path: Path,
+) -> None:
+    report, parent, folder = build_empty_folder_candidate(tmp_path, "Parent")
+    child_path = folder / "Child"
+    child_path.mkdir()
+    child = copy.deepcopy(parent)
+    child.update(
+        candidate_id="folder-cleanup-002",
+        path=str(child_path),
+        scan_root=str(tmp_path),
+        name="Child",
+        modified_at_utc=utc_timestamp(child_path),
+    )
+
+    with pytest.raises(CleanupRecordError, match="overlapping parent and child"):
+        execute_guided_cleanup(
+            report,
+            [parent, child],
+            recycler=lambda _path: None,
+        )
+
+
+def test_mixed_file_and_folder_cleanup_is_rejected(
+    storage_fixture, tmp_path: Path
+) -> None:
+    report, file_candidate, _file_path = build_candidate_report(
+        storage_fixture, tmp_path
+    )
+    _folder_report, folder_candidate, _folder = build_empty_folder_candidate(
+        tmp_path, "Empty Folder"
+    )
+
+    with pytest.raises(CleanupRecordError, match="cannot mix"):
+        execute_guided_cleanup(
+            report,
+            [file_candidate, folder_candidate],
+            recycler=lambda _path: None,
+        )

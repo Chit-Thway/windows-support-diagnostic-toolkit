@@ -22,8 +22,8 @@ candidate attributes, scan completeness, and structured errors.
 - Access-denied, disappearing, or unreadable paths do not stop the remaining
   scan.
 - Candidate details are bounded while aggregate candidate totals continue; the
-  retained set is chosen by deterministic review value rather than traversal
-  order.
+  retained set keeps the largest physical candidates first, then uses safety
+  and evidence as deterministic tie-breakers rather than traversal order.
 - Last-access time is informational and is never classification evidence.
 - Reports are schema-validated before export and existing reports are not
   overwritten.
@@ -112,29 +112,37 @@ python -m dashboard `
 
 Each disk card automatically uses the selected report whose drive letter
 matches that disk. There is no need to restart the dashboard to switch between
-C: and F:.
+C: and F:. Each newly generated report contains both file and folder candidates;
+a second folder-specific scan is not required.
 
 Open <http://127.0.0.1:5000>, then select the matching disk card. The per-drive
 page validates storage contract `1.0.0` and displays capacity, non-overlapping
 categories, scan completeness, inaccessible paths, candidate totals, and
-limitations. Its candidate explorer supports:
+limitations. Use the **Files / Folders** switch to change between individual
+files and aggregated folder trees from the same report. Its candidate explorer
+supports:
 
 - `Match all` and `Match any` attribute filters;
-- minimum size and age, extension, root, confidence, removal-risk, and
-  eligibility filters;
+- minimum size and age, root, confidence, removal-risk, and eligibility filters,
+  plus file extension in the Files view;
 - deterministic sorting by size, modification time, path, or confidence;
 - individual selection and `Select all visible` for the current page;
 - unique selected-byte totals that do not double-count overlapping attributes;
-- copying a path, opening an eligible containing folder, and exporting a local
+- copying a path, opening an eligible location, and exporting a local
   review-only cleanup plan;
-- opening an exact-path cleanup preview for explicitly selected eligible files.
+- opening an exact-path cleanup preview for explicitly selected eligible files
+  or folder trees.
 
 The page does not start scans or perform repairs. Opening a preview does not
-change files. A separate, explicit POST confirmation can move revalidated
-regular files to the Windows Recycle Bin only. There is no permanent-delete
-fallback and no directory action. Exported review plans contain real local
-paths and are ignored by Git through `storage-cleanup-review*.json`; cleanup
-results stay under ignored `cleanup-records/`.
+change files. A separate, explicit POST confirmation can move revalidated files
+or eligible folder trees to the Windows Recycle Bin only. There is no
+permanent-delete fallback. A folder operation rechecks the entire descendant
+tree, rejects reparse points or changed metadata, and cannot include overlapping
+parent and child selections. A metadata-only tree fingerprint catches renamed
+or same-sized replacement entries without opening or hashing file contents.
+Exported review plans contain real local paths and are ignored by Git through
+`storage-cleanup-review*.json`; cleanup results stay under ignored
+`cleanup-records/`.
 
 The guided-cleanup workflow, checks, results, and limitations are documented in
 [`docs/guided-cleanup.md`](../docs/guided-cleanup.md).
@@ -156,7 +164,8 @@ The defaults are:
 - likely incomplete: allowlisted partial-download extension at least 24 hours
   old;
 - temporary: `.tmp` or `.temp` file at least 168 hours old;
-- candidate details retained: 5,000.
+- file candidate details retained: 5,000;
+- folder candidate details retained: 2,000.
 
 Override them explicitly:
 
@@ -167,22 +176,33 @@ python -m storage `
   --large-bytes 1073741824 `
   --incomplete-min-hours 24 `
   --temporary-min-hours 168 `
-  --max-candidates 5000
+  --max-candidates 5000 `
+  --max-folder-candidates 2000
 ```
 
 `Stale`, `Likely incomplete`, `Large`, `Empty`, and `Temporary` are review
-attributes. None means that a file is unused, corrupted, or safe to remove.
+attributes. None means that a file or folder is unused, corrupted, or safe to
+remove. A folder is stale only when every observed descendant file is stale.
+Nested empty or equivalent stale chains collapse to the highest useful folder
+candidate instead of producing a row for every level.
 
 The scanner separately labels removal risk. Application-managed AppData,
-installer/application files, databases, configuration files, and likely game
-or application saves are `High` risk and `Review only`; the dashboard can show
-and open their containing folders, but it cannot select them for recycling.
-Candidate confidence describes classification evidence, not removal safety.
+installer/application files, databases, configuration files, likely game or
+application saves, runtime folders, and large-only folder trees are `High` risk
+and `Review only`; the dashboard can show and open them, but it cannot select
+them for recycling. Candidate confidence describes classification evidence,
+not removal safety.
 
 Drive-chart categories use Windows allocated-size metadata and a stable
 volume/file identity. Logical file size remains available for evidence, but it
 does not drive the physical-space donut chart. Inaccessible bytes and filesystem
 overhead remain in `Other or unreadable`.
+
+Folder candidate sizes are hierarchy aggregates and therefore overlap: a
+parent includes its descendants. They are never summed into the physical-space
+chart or presented as a unique recovery total. Hard-linked data can also make a
+folder's path-based recovery estimate higher than the physical bytes ultimately
+reclaimed.
 
 ## Development-storage insights
 

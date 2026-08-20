@@ -129,6 +129,14 @@
           "type": "integer",
           "minimum": 0
         },
+        "folder_candidate_details_retained": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "folder_candidate_details_omitted": {
+          "type": "integer",
+          "minimum": 0
+        },
         "inaccessible_path_details_retained": {
           "type": "integer",
           "minimum": 0
@@ -249,6 +257,11 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 100000
+            },
+            "maximum_folder_candidates_retained": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50000
             },
             "maximum_issue_records": {
               "type": "integer",
@@ -402,6 +415,16 @@
     },
     "candidates": {
       "type": "array",
+      "items": {
+        "$ref": "#/$defs/candidate"
+      }
+    },
+    "folder_candidate_summary": {
+      "$ref": "#/$defs/folderCandidateSummary"
+    },
+    "folder_candidates": {
+      "type": "array",
+      "maxItems": 50000,
       "items": {
         "$ref": "#/$defs/candidate"
       }
@@ -765,6 +788,81 @@
         }
       }
     },
+    "folderAttributeSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_count",
+        "overlapping_bytes"
+      ],
+      "properties": {
+        "candidate_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "overlapping_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "folderCandidateSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "accounting_method",
+        "total_candidates",
+        "retained_candidates",
+        "omitted_candidates",
+        "largest_candidate_allocated_bytes",
+        "attributes"
+      ],
+      "properties": {
+        "accounting_method": {
+          "const": "overlapping_hierarchy"
+        },
+        "total_candidates": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "retained_candidates": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "omitted_candidates": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "largest_candidate_allocated_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "stale",
+            "likely_incomplete",
+            "large",
+            "empty",
+            "temporary",
+            "development_cache",
+            "protected",
+            "unavailable"
+          ],
+          "properties": {
+            "stale": {"$ref": "#/$defs/folderAttributeSummary"},
+            "likely_incomplete": {"$ref": "#/$defs/folderAttributeSummary"},
+            "large": {"$ref": "#/$defs/folderAttributeSummary"},
+            "empty": {"$ref": "#/$defs/folderAttributeSummary"},
+            "temporary": {"$ref": "#/$defs/folderAttributeSummary"},
+            "development_cache": {"$ref": "#/$defs/folderAttributeSummary"},
+            "protected": {"$ref": "#/$defs/folderAttributeSummary"},
+            "unavailable": {"$ref": "#/$defs/folderAttributeSummary"}
+          }
+        }
+      }
+    },
     "candidateAttribute": {
       "enum": [
         "stale",
@@ -809,6 +907,9 @@
         "is_reparse_point"
       ],
       "properties": {
+        "item_type": {
+          "enum": ["file", "folder"]
+        },
         "candidate_id": {
           "type": "string",
           "minLength": 1,
@@ -831,7 +932,7 @@
             "string",
             "null"
           ],
-          "maxLength": 64
+          "maxLength": 255
         },
         "size_bytes": {
           "type": [
@@ -922,8 +1023,41 @@
         "is_regular_file": {
           "type": "boolean"
         },
+        "is_directory": {
+          "type": "boolean"
+        },
         "is_reparse_point": {
           "type": "boolean"
+        },
+        "file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "directory_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "newest_descendant_modified_at_utc": {
+          "oneOf": [
+            {"$ref": "#/$defs/utcDateTime"},
+            {"type": "null"}
+          ]
+        },
+        "oldest_descendant_modified_at_utc": {
+          "oneOf": [
+            {"$ref": "#/$defs/utcDateTime"},
+            {"type": "null"}
+          ]
+        },
+        "contains_unavailable_items": {
+          "type": "boolean"
+        },
+        "contains_high_risk_items": {
+          "type": "boolean"
+        },
+        "tree_metadata_fingerprint": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
         }
       }
     },

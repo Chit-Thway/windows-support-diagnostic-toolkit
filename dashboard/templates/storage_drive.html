@@ -16,7 +16,7 @@
             <div>
                 <p class="eyebrow">Storage insights · read-only analysis</p>
                 <h1>{{ storage.drive.drive_letter }} storage</h1>
-                <p class="header-copy">Understand capacity, scan coverage, and files that may deserve review. Analysis and selection are read-only; recycling requires a separate exact-path review and confirmation.</p>
+                <p class="header-copy">Understand capacity, scan coverage, and files or folders that may deserve review. Analysis and selection are read-only; recycling requires a separate exact-path review and confirmation.</p>
             </div>
             <dl class="report-meta">
                 <div><dt>Analysis created</dt><dd><time class="js-local-time" datetime="{{ storage.generated_at_utc }}">{{ storage.generated_at_utc }}</time></dd></div>
@@ -173,7 +173,19 @@
             <details class="panel development-limitations"><summary>Development-insight limitations</summary><ul>{% for limitation in storage.development.limitations %}<li>{{ limitation }}</li>{% endfor %}</ul></details>
         </section>
 
-        <section aria-labelledby="candidates-heading">
+        <section class="panel candidate-mode-panel" aria-label="Candidate view">
+            <div>
+                <p class="eyebrow">Analysis view</p>
+                <h2>Review files or folder trees</h2>
+                <p class="support-note">Both views come from the same metadata-only scan. Folder sizes can overlap across parent and child rows.</p>
+            </div>
+            <div class="candidate-mode-switch" role="group" aria-label="Candidate type">
+                <button type="button" class="candidate-mode-button is-active" data-candidate-mode="file" aria-pressed="true">Files</button>
+                <button type="button" class="candidate-mode-button" data-candidate-mode="folder" aria-pressed="false" {% if not storage.folder_analysis_available %}disabled title="Generate a fresh storage report to enable folder analysis."{% endif %}>Folders</button>
+            </div>
+        </section>
+
+        <section aria-labelledby="candidates-heading" data-candidate-summary="file">
             <div class="section-heading">
                 <div>
                     <p class="eyebrow">Review evidence</p>
@@ -205,11 +217,45 @@
             {% endif %}
         </section>
 
+        <section aria-labelledby="folder-candidates-heading" data-candidate-summary="folder" hidden>
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Aggregated review evidence</p>
+                    <h2 id="folder-candidates-heading">Folder-candidate summary</h2>
+                </div>
+            </div>
+            <div class="panel candidate-total">
+                <div><span class="candidate-total-number">{{ storage.folder_candidate_summary.total_candidates }}</span><span>collapsed folder candidates</span></div>
+                <div><span class="candidate-total-number">{{ storage.folder_candidate_summary.largest_candidate_allocated_size }}</span><span>largest candidate tree</span></div>
+                <p>Folder rows are hierarchical and may overlap, so their sizes are never added together as unique recoverable space.</p>
+            </div>
+            <div class="candidate-summary-grid">
+                {% for attribute in storage.folder_candidate_summary.attributes %}
+                    <article class="panel candidate-summary-card">
+                        <p class="eyebrow">{{ attribute.label }}</p>
+                        <p class="candidate-count">{{ attribute.count }}</p>
+                        <p>{{ attribute.size }} across overlapping folder rows</p>
+                    </article>
+                {% endfor %}
+            </div>
+            {% if not storage.folder_analysis_available %}
+                <div class="panel empty-state"><h3>Fresh analysis required</h3><p>This older report predates folder analysis. Generate a new storage report for this drive.</p></div>
+            {% elif storage.folder_candidate_summary.total_candidates == 0 %}
+                <div class="panel empty-state"><h3>No folder candidates reported</h3><p>The scan did not identify directory trees matching the folder review rules.</p></div>
+            {% endif %}
+            {% if storage.folder_candidate_summary.excluded_count %}
+                <p class="panel safety-note"><strong>{{ storage.folder_candidate_summary.excluded_count }} retained review-only or unavailable folder record(s)</strong> are excluded from cleanup eligibility.</p>
+            {% endif %}
+            {% if storage.folder_candidate_summary.omitted_candidates %}
+                <p class="panel safety-note"><strong>{{ storage.folder_candidate_summary.omitted_candidates }} folder detail(s) were omitted by the report limit.</strong></p>
+            {% endif %}
+        </section>
+
         <section class="candidate-explorer" aria-labelledby="explorer-heading" data-candidate-explorer data-page-size="25">
             <div class="section-heading">
                 <div>
                     <p class="eyebrow">Retained candidate details</p>
-                    <h2 id="explorer-heading">Candidate explorer</h2>
+                    <h2 id="explorer-heading"><span data-mode-heading>File</span> · Candidate explorer</h2>
                 </div>
                 <span class="status-badge status-unavailable">Read-only review</span>
             </div>
@@ -231,7 +277,7 @@
                 <div class="filter-grid">
                     <label>Minimum size (MiB)<input type="number" name="minimum-size" min="0" step="1" inputmode="numeric"></label>
                     <label>Minimum age (days)<input type="number" name="minimum-age" min="0" step="1" inputmode="numeric"></label>
-                    <label>File extension<input type="text" name="extension" placeholder=".zip"></label>
+                    <label data-file-only-filter>File extension<input type="text" name="extension" placeholder=".zip"></label>
                     <label>Path contains<input type="text" name="path-query" placeholder="Downloads\Archive"></label>
                     <label>Scan root<select name="scan-root"><option value="">All roots</option>{% for root in storage.candidate_root_options %}<option value="{{ root }}">{{ root }}</option>{% endfor %}</select></label>
                     <label>Confidence<select name="confidence"><option value="">Any confidence</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
@@ -272,7 +318,7 @@
                     <thead>
                         <tr>
                             <th scope="col"><span class="visually-hidden">Select</span></th>
-                            <th scope="col">File</th>
+                            <th scope="col"><span data-item-heading>File</span></th>
                             <th scope="col">On disk</th>
                             <th scope="col">Modified</th>
                             <th scope="col">Attributes</th>
@@ -282,9 +328,10 @@
                         </tr>
                     </thead>
                     <tbody data-candidate-rows>
-                        {% for candidate in storage.candidates %}
+                        {% for candidate in storage.all_candidates %}
                             <tr data-candidate-row
                                 data-candidate-id="{{ candidate.candidate_id }}"
+                                data-candidate-kind="{{ candidate.item_type }}"
                                 data-candidate-name="{{ candidate.name }}"
                                 data-candidate-path="{{ candidate.path }}"
                                 data-path-sort="{{ candidate.path | lower }}"
@@ -298,6 +345,7 @@
                                 data-confidence="{{ candidate.confidence }}"
                                 data-removal-risk="{{ candidate.removal_risk }}"
                                 data-eligibility="{{ candidate.eligibility }}"
+                                data-selectable="{{ 'true' if candidate.selectable else 'false' }}"
                                 data-attributes="{{ candidate.attributes_filter }}">
                                 <td>
                                     <input type="checkbox"
@@ -312,6 +360,7 @@
                                         <summary>Path and evidence</summary>
                                         <p class="path-value">{{ candidate.path }}</p>
                                         <p><strong>Logical size:</strong> {{ candidate.size }}</p>
+                                        {% if candidate.item_type == "folder" %}<p><strong>Tree contents:</strong> {{ candidate.file_count_display }} file{% if candidate.file_count != 1 %}s{% endif %} and {{ candidate.directory_count_display }} subfolder{% if candidate.directory_count != 1 %}s{% endif %}.</p>{% endif %}
                                         <p><strong>Protection:</strong> {{ candidate.protection.explanation }}</p>
                                         <ul>
                                             {% for evidence in candidate.evidence %}
@@ -331,7 +380,7 @@
                                         <button type="button" class="text-button" data-open-folder
                                                 data-action-url="{{ url_for('open_storage_folder', drive=storage.drive.drive_letter) }}"
                                                 data-action-token="{{ storage_action_token }}"
-                                                {% if not candidate.folder_openable %}disabled title="Only regular reviewable files can open their containing folder."{% endif %}>Open folder</button>
+                                                {% if not candidate.folder_openable %}disabled title="Only regular reviewable files can open their containing folder; folder rows require a reviewable directory."{% endif %}>Open folder</button>
                                     </div>
                                 </td>
                             </tr>
@@ -350,7 +399,7 @@
                 <button type="button" class="secondary-button" data-page-next disabled>Next</button>
             </nav>
 
-            <p class="milestone-note">Selection and filtering do not change files. A Recycle Bin action starts only after a separate exact-path review and explicit confirmation.</p>
+            <p class="milestone-note">Selection and filtering do not change files or folders. A Recycle Bin action starts only after a separate exact-path review, complete revalidation, and explicit confirmation.</p>
         </section>
 
         <section aria-labelledby="scope-heading">

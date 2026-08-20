@@ -305,7 +305,51 @@ def test_open_folder_action_uses_report_candidate_not_client_path() -> None:
     assert response.status_code == 200
     assert response.get_json()["ok"] is True
     assert [str(folder) for folder in opened] == [
-        r"C:\Users\fictional.jamie\Downloads"
+        r"C:\Users\fictional.jamie\Downloads\Archive"
+    ]
+
+
+def test_fresh_sample_exposes_file_and_folder_candidate_views() -> None:
+    response = build_app(
+        REPOSITORY_ROOT / "sample_data" / "sample-storage-report.json"
+    ).test_client().get("/storage/C:")
+    body = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert 'data-candidate-mode="file"' in body
+    assert 'data-candidate-mode="folder"' in body
+    assert 'data-candidate-kind="folder"' in body
+    assert "Folder-candidate summary" in body
+    assert "Folder sizes can overlap" in body
+    assert "Old Empty" in body
+
+
+def test_open_folder_action_opens_selected_folder_candidate_itself() -> None:
+    opened: list[Path] = []
+    app = create_app(
+        report_path=REPOSITORY_ROOT / "sample_data" / "sample-report.json",
+        storage_report_path=(
+            REPOSITORY_ROOT / "sample_data" / "sample-storage-report.json"
+        ),
+        test_config={
+            "TESTING": True,
+            "STORAGE_ACTION_TOKEN": "fixed-token",
+            "OPEN_STORAGE_FOLDER_HANDLER": lambda folder: opened.append(folder),
+        },
+    )
+
+    response = app.test_client().post(
+        "/storage/C:/open-folder",
+        data={
+            "action_token": "fixed-token",
+            "candidate_kind": "folder",
+            "candidate_id": "folder-sample-001",
+        },
+    )
+
+    assert response.status_code == 200
+    assert [str(folder) for folder in opened] == [
+        r"C:\Users\fictional.jamie\Downloads\Archive"
     ]
 
 

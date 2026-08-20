@@ -98,3 +98,19 @@ def test_preview_store_evicts_oldest_state_at_its_memory_limit(tmp_path) -> None
         MAX_STORED_PREVIEWS
     )
 
+
+def test_even_one_folder_requires_typed_confirmation(tmp_path) -> None:
+    folder = candidate("folder-one")
+    folder["item_type"] = "folder"
+
+    preview = CleanupPreviewStore().create(
+        drive_letter="F:",
+        storage_report_path=tmp_path / "report.json",
+        source_generated_at_utc="2026-08-03T00:00:00Z",
+        candidates=[folder],
+    )
+
+    assert preview.candidate_kind == "folder"
+    assert preview.requires_additional_confirmation is True
+    assert preview.confirmation_phrase == "RECYCLE 1 FOLDER"
+

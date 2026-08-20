@@ -33,6 +33,7 @@ class CleanupPreview:
     drive_letter: str
     storage_report_path: str
     source_generated_at_utc: str
+    candidate_kind: str
     candidates: tuple[dict[str, Any], ...]
     total_bytes: int
     requires_additional_confirmation: bool
@@ -74,6 +75,12 @@ class CleanupPreviewStore:
         candidates: Iterable[dict[str, Any]],
     ) -> CleanupPreview:
         selected = tuple(copy.deepcopy(tuple(candidates)))
+        kinds = {candidate.get("item_type", "file") for candidate in selected}
+        if len(kinds) != 1 or not kinds.issubset({"file", "folder"}):
+            raise CleanupPreviewError(
+                "A cleanup preview must contain either files or folders, not both."
+            )
+        candidate_kind = next(iter(kinds))
         now = self._now()
         total_bytes = sum(
             candidate.get("allocated_size_bytes")
@@ -82,10 +89,19 @@ class CleanupPreviewStore:
             for candidate in selected
         )
         high_risk = (
-            len(selected) >= HIGH_RISK_FILE_COUNT
+            candidate_kind == "folder"
+            or len(selected) >= HIGH_RISK_FILE_COUNT
             or total_bytes >= HIGH_RISK_TOTAL_BYTES
         )
-        noun = "FILE" if len(selected) == 1 else "FILES"
+        noun = (
+            "FOLDER"
+            if candidate_kind == "folder" and len(selected) == 1
+            else "FOLDERS"
+            if candidate_kind == "folder"
+            else "FILE"
+            if len(selected) == 1
+            else "FILES"
+        )
         phrase = f"RECYCLE {len(selected)} {noun}" if high_risk else None
         preview = CleanupPreview(
             token=secrets.token_urlsafe(32),
@@ -94,6 +110,7 @@ class CleanupPreviewStore:
             drive_letter=drive_letter,
             storage_report_path=str(Path(storage_report_path).resolve()),
             source_generated_at_utc=source_generated_at_utc,
+            candidate_kind=candidate_kind,
             candidates=selected,
             total_bytes=total_bytes,
             requires_additional_confirmation=high_risk,

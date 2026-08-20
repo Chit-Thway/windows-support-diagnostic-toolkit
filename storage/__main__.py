@@ -71,6 +71,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--temporary-min-hours", type=int, default=168)
     parser.add_argument("--max-candidates", type=int, default=5000)
     parser.add_argument(
+        "--max-folder-candidates",
+        type=int,
+        default=2000,
+        help="Maximum retained folder-candidate details.",
+    )
+    parser.add_argument(
         "--max-issue-records",
         type=int,
         default=1000,
@@ -154,6 +160,9 @@ def main(argv: list[str] | None = None) -> int:
         scanner_options = ScannerOptions(
             classification=classification_options,
             maximum_candidates_retained=arguments.max_candidates,
+            maximum_folder_candidates_retained=(
+                arguments.max_folder_candidates
+            ),
             maximum_issue_records=arguments.max_issue_records,
             development_cache_roots=tuple(arguments.development_cache_root),
             discover_development_insights=(
@@ -190,6 +199,10 @@ def main(argv: list[str] | None = None) -> int:
     print(
         "Candidates: "
         f"{report['candidate_summary']['total_unique_candidates']}"
+    )
+    print(
+        "Folder candidates: "
+        f"{report['folder_candidate_summary']['total_candidates']}"
     )
     print(f"Report saved to: {written_path}")
     return 0

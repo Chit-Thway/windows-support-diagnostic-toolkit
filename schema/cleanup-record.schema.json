@@ -57,6 +57,7 @@
         "required": ["candidate_id", "path", "expected_size_bytes", "expected_modified_at_utc", "status", "message"],
         "properties": {
           "candidate_id": {"type": "string", "minLength": 1, "maxLength": 100},
+          "item_type": {"enum": ["file", "folder"]},
           "path": {"type": "string", "minLength": 3, "maxLength": 32767},
           "expected_size_bytes": {"type": ["integer", "null"], "minimum": 0},
           "expected_modified_at_utc": {"type": ["string", "null"], "format": "date-time"},
@@ -72,7 +73,7 @@
       "properties": {
         "action": {"const": "windows_recycle_bin_only"},
         "permanent_delete_fallback": {"const": false},
-        "directories_allowed": {"const": false}
+        "directories_allowed": {"type": "boolean"}
       }
     }
   }

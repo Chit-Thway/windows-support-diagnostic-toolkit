@@ -26,7 +26,16 @@ def test_eligible_candidate_resolves_to_reported_containing_folder() -> None:
 
     folder = validate_candidate_for_folder_action(report, report["candidates"][0])
 
-    assert str(folder) == r"C:\Users\fictional.jamie\Downloads"
+    assert str(folder) == r"C:\Users\fictional.jamie\Downloads\Archive"
+
+
+def test_folder_candidate_resolves_to_the_folder_itself() -> None:
+    report = sample_report()
+    candidate = report["folder_candidates"][0]
+
+    folder = validate_candidate_for_folder_action(report, candidate)
+
+    assert str(folder) == candidate["path"]
 
 
 def test_unavailable_candidate_cannot_open_folder() -> None:

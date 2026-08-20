@@ -204,10 +204,21 @@ def create_app(
             return jsonify(ok=False, message=error.detail), error.status_code
 
         candidate_id = request.form.get("candidate_id", "")
+        candidate_kind = request.form.get("candidate_kind", "file")
+        if candidate_kind not in {"file", "folder"}:
+            return jsonify(
+                ok=False,
+                message="The candidate type is invalid.",
+            ), 400
+        candidate_collection = (
+            storage_report.get("folder_candidates", [])
+            if candidate_kind == "folder"
+            else storage_report["candidates"]
+        )
         candidate = next(
             (
                 item
-                for item in storage_report["candidates"]
+                for item in candidate_collection
                 if item["candidate_id"] == candidate_id
             ),
             None,

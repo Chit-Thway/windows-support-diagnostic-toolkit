@@ -105,3 +105,23 @@ def test_development_insights_group_informational_locations() -> None:
     )
     assert pip_cache["size_display"] == "Unavailable"
     assert pip_cache["scope_label"].endswith("not measured")
+
+
+def test_folder_candidates_are_presented_separately_from_files() -> None:
+    report = json.loads(
+        (REPOSITORY_ROOT / "sample_data" / "sample-storage-report.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    view = present_storage_report(report, diagnostic_status="Healthy")
+
+    assert view["folder_analysis_available"] is True
+    assert len(view["candidates"]) == 1
+    assert len(view["folder_candidates"]) == 2
+    assert len(view["all_candidates"]) == 3
+    assert view["folder_candidates"][0]["item_type"] == "folder"
+    assert view["folder_candidates"][0]["selectable"] is True
+    assert view["folder_candidate_summary"][
+        "largest_candidate_allocated_size"
+    ] == "5.59 GiB"

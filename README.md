@@ -128,19 +128,23 @@ python -m dashboard `
 
 Each disk card is an accessible link to its per-drive storage page. The page
 shows a non-overlapping capacity chart, scan completeness, inaccessible paths,
-candidate totals, and a read-only candidate explorer. Candidates can be
-filtered with explicit `Match all` or `Match any` behavior, sorted, selected,
-copied, opened in their containing folder, or exported as a local review plan.
-An explicit **Review Recycle Bin action** opens a final exact-path preview.
-Only a separately confirmed POST action can move eligible regular files to the
-Windows Recycle Bin. If a custom diagnostic report has no selected storage
-analysis, the page explains how to create one instead of starting a scan
-silently.
+candidate totals, and a read-only candidate explorer. A **Files / Folders**
+switch changes between individual-file evidence and aggregated folder-tree
+evidence from the same report. Candidates can be filtered with explicit
+`Match all` or `Match any` behavior, sorted, selected, copied, opened in File
+Explorer, or exported as a local review plan. An explicit **Review Recycle Bin
+action** opens a final exact-path preview. Only a separately confirmed POST
+action can move eligible files or folder trees to the Windows Recycle Bin. If a
+custom diagnostic report has no selected storage analysis, the page explains
+how to create one instead of starting a scan silently.
 
-Guided cleanup never permanently deletes a file as a fallback, never processes
-directories, and checks every selected file again immediately before the
-Recycle Bin call. Large selections require an additional typed phrase. Per-file
-outcomes are stored only under ignored `cleanup-records/`. See
+Guided cleanup never permanently deletes an item as a fallback. It rechecks
+every selected file and every descendant of a selected folder immediately
+before the Recycle Bin call. Parent and child folders cannot be selected in the
+same operation. Folder actions always require a typed confirmation phrase, and
+high-risk application, save-data, configuration, and AppData trees remain
+review-only. Per-item outcomes are stored only under ignored
+`cleanup-records/`. See
 [`docs/guided-cleanup.md`](docs/guided-cleanup.md) for the full safety model.
 
 Alternatively, select a report through an environment variable:
@@ -263,9 +267,17 @@ visible-only selection, copy-path, open-folder, and local review-plan export.
 Milestone 5 adds a guarded exact-path review and Recycle Bin-only confirmation
 with per-file revalidation and results. Milestone 6 adds informational Python
 environment, supported pip-cache, and Java runtime insights without making
-runtimes automatic cleanup candidates. See
+runtimes automatic cleanup candidates. Milestone 7 hardens whole-drive
+accounting and failure paths. Milestone 8 adds folder-tree aggregation, a
+Files/Folders explorer switch, and conservative folder cleanup safeguards while
+preserving the existing file workflow. See
 [`docs/storage-report-contract.md`](docs/storage-report-contract.md) and
 [`docs/development-storage-insights.md`](docs/development-storage-insights.md).
+
+The V2 File-Type Explorer is being designed around a separate versioned
+per-drive index for ranked folder totals and extension-aware review. Its
+Milestone 1 contract and fictional sample are documented in
+[`docs/file-type-index-contract.md`](docs/file-type-index-contract.md).
 
 Real scans are written only to ignored `storage-reports/`.
 
@@ -297,6 +309,10 @@ python -m dashboard `
   --storage-report '.\storage-reports\f-drive-report.json'
 ```
 
+Each new per-drive storage report contains both file and folder candidates. A
+second folder-specific scan is not required; old reports must be regenerated to
+enable the Folders view.
+
 Development discovery is enabled for storage scans by default. It recognises
 `pyvenv.cfg` markers without reading their contents, queries pip's supported
 cache-location command, and reads supported Java runtime properties when Java
@@ -318,7 +334,7 @@ tests/storage/         Storage contract tests and fictional fixtures
 tests/*.ps1            Collector and contract tests
 reports/               Ignored local reports
 storage-reports/       Ignored local storage-analysis reports
-cleanup-records/       Ignored local per-file cleanup result records
+cleanup-records/       Ignored local per-item cleanup result records
 ```
 
 ## Current limitations
@@ -328,14 +344,19 @@ cleanup-records/       Ignored local per-file cleanup result records
   are rejected.
 - One diagnostic report and multiple independent per-drive storage reports can
   be selected when the server starts.
-- Guided cleanup supports eligible regular files only. It does not process
-  directories, request elevation, empty the Recycle Bin, or permanently delete.
+- Guided cleanup supports eligible regular files and conservatively classified
+  folder trees. It does not request elevation, empty the Recycle Bin, or
+  permanently delete.
+- Folder candidate totals overlap by hierarchy and are not drive-accounting
+  totals. Folder sizes can overestimate recoverable physical space when hard
+  links appear at several paths.
 - Recycle Bin recovery is controlled by Windows and is not guaranteed
   indefinitely.
 - Development locations outside selected roots are displayed but not measured;
   no universal Java cache is assumed.
-- `Open folder` is available for eligible and review-only regular candidates
-  whose containing directory still exists and passes current path checks.
+- `Open folder` is available for eligible and review-only file or folder
+  candidates whose target directory still exists and passes current path
+  checks.
 - Statuses use documented deterministic thresholds and are not AI diagnoses.
 - The Flask development server is intended only for local use.
 - There is no report history, database, authentication, remote access,

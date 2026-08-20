@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0.0",
+  "index_type": "file_type_index",
+  "index_id": "fictional-bounded-index",
+  "generated_at_utc": "2026-08-20T06:01:00Z",
+  "indexer": {"name": "File-Type Explorer Indexer", "version": "0.2.0", "platform": "Windows", "mode": "metadata_only"},
+  "drive": {"drive_letter": "C:", "volume_label": "Fictional Test", "filesystem": "NTFS", "total_bytes": 1000000, "used_bytes": 600000, "free_bytes": 400000, "observed_at_utc": "2026-08-20T06:01:00Z"},
+  "scan": {
+    "started_at_utc": "2026-08-20T06:00:00Z",
+    "completed_at_utc": "2026-08-20T06:01:00Z",
+    "duration_ms": 60000,
+    "status": "complete",
+    "aggregate_coverage": "exact",
+    "files_examined": 3,
+    "directories_examined": 2,
+    "logical_bytes_observed": 600,
+    "zero_byte_files": 0,
+    "matching_files": 3,
+    "matching_logical_bytes": 600,
+    "inaccessible_path_details_retained": 0,
+    "inaccessible_path_details_omitted": 0,
+    "scan_error_details_retained": 0,
+    "scan_error_details_omitted": 0
+  },
+  "scope": {"root_path": "C:\\", "recursive": true, "explicitly_requested": true},
+  "extension_groups": [
+    {"group_id": "documents", "label": "Documents", "extensions": [".pdf", ".doc", ".docx", ".odt", ".rtf", ".txt", ".ppt", ".pptx", ".xls", ".xlsx"]},
+    {"group_id": "videos", "label": "Videos", "extensions": [".mp4", ".mkv", ".avi", ".mov", ".wmv", ".webm"]},
+    {"group_id": "audio", "label": "Audio", "extensions": [".mp3", ".wav", ".flac", ".m4a", ".aac"]},
+    {"group_id": "images", "label": "Images", "extensions": [".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic"]},
+    {"group_id": "archives_disk_images", "label": "Archives and disk images", "extensions": [".zip", ".rar", ".7z", ".tar", ".gz", ".iso"]},
+    {"group_id": "installers", "label": "Installers", "extensions": [".exe", ".msi", ".msix", ".appx"]}
+  ],
+  "custom_extensions": [],
+  "folders": [
+    {
+      "folder_id": "folder-root",
+      "parent_id": null,
+      "path": "C:\\",
+      "name": "C:\\",
+      "depth": 0,
+      "direct_file_count": 0,
+      "recursive_file_count": 3,
+      "direct_logical_bytes": 0,
+      "recursive_logical_bytes": 600,
+      "direct_zero_byte_files": 0,
+      "recursive_zero_byte_files": 0,
+      "extension_totals": [{"extension": ".pdf", "direct_file_count": 0, "direct_logical_bytes": 0, "recursive_file_count": 3, "recursive_logical_bytes": 600}],
+      "access": {"state": "normal", "reason_code": "explicit_drive_scope", "explanation": "The fictional drive root was explicitly selected for local analysis."}
+    },
+    {
+      "folder_id": "folder-downloads",
+      "parent_id": "folder-root",
+      "path": "C:\\Downloads",
+      "name": "Downloads",
+      "depth": 1,
+      "direct_file_count": 3,
+      "recursive_file_count": 3,
+      "direct_logical_bytes": 600,
+      "recursive_logical_bytes": 600,
+      "direct_zero_byte_files": 0,
+      "recursive_zero_byte_files": 0,
+      "extension_totals": [{"extension": ".pdf", "direct_file_count": 3, "direct_logical_bytes": 600, "recursive_file_count": 3, "recursive_logical_bytes": 600}],
+      "access": {"state": "normal", "reason_code": "user_content", "explanation": "The fictional folder is available for manual review."}
+    }
+  ],
+  "empty_summary": {"zero_byte_files": 0, "collapsed_tree_count": 0, "trees": []},
+  "file_detail_summary": {"coverage": "bounded", "retained_files": 1, "omitted_files": 2, "retained_logical_bytes": 300, "omitted_logical_bytes": 300},
+  "files": [
+    {"file_id": "file-001", "folder_id": "folder-downloads", "path": "C:\\Downloads\\largest-fictional.pdf", "name": "largest-fictional.pdf", "extension": ".pdf", "size_bytes": 300, "modified_at_utc": "2020-01-01T00:00:00Z", "selection_state": "selectable", "protection_reason": "Personal files require explicit human review."}
+  ],
+  "inaccessible_paths": [],
+  "scan_errors": [],
+  "limitations": ["Two smaller fictional file details were omitted while exact aggregate totals were retained."]
+}

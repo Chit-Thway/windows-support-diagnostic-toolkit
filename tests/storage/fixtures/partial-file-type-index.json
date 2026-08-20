@@ -1,0 +1,124 @@
+{
+  "schema_version": "1.0.0",
+  "index_type": "file_type_index",
+  "index_id": "fictional-f-drive-partial-index",
+  "generated_at_utc": "2026-08-20T05:03:00Z",
+  "indexer": {
+    "name": "File-Type Explorer Indexer",
+    "version": "0.2.0",
+    "platform": "Windows",
+    "mode": "metadata_only"
+  },
+  "drive": {
+    "drive_letter": "F:",
+    "volume_label": "Fictional Media",
+    "filesystem": "NTFS",
+    "total_bytes": 1073741824000,
+    "used_bytes": 644245094400,
+    "free_bytes": 429496729600,
+    "observed_at_utc": "2026-08-20T05:03:00Z"
+  },
+  "scan": {
+    "started_at_utc": "2026-08-20T05:00:00Z",
+    "completed_at_utc": "2026-08-20T05:03:00Z",
+    "duration_ms": 180000,
+    "status": "partial",
+    "aggregate_coverage": "partial",
+    "files_examined": 1,
+    "directories_examined": 3,
+    "logical_bytes_observed": 104857600,
+    "zero_byte_files": 0,
+    "matching_files": 1,
+    "matching_logical_bytes": 104857600,
+    "inaccessible_path_details_retained": 1,
+    "inaccessible_path_details_omitted": 0,
+    "scan_error_details_retained": 1,
+    "scan_error_details_omitted": 0
+  },
+  "scope": {
+    "root_path": "F:\\",
+    "recursive": true,
+    "explicitly_requested": true
+  },
+  "extension_groups": [
+    {"group_id": "documents", "label": "Documents", "extensions": [".pdf", ".doc", ".docx", ".odt", ".rtf", ".txt", ".ppt", ".pptx", ".xls", ".xlsx"]},
+    {"group_id": "videos", "label": "Videos", "extensions": [".mp4", ".mkv", ".avi", ".mov", ".wmv", ".webm"]},
+    {"group_id": "audio", "label": "Audio", "extensions": [".mp3", ".wav", ".flac", ".m4a", ".aac"]},
+    {"group_id": "images", "label": "Images", "extensions": [".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic"]},
+    {"group_id": "archives_disk_images", "label": "Archives and disk images", "extensions": [".zip", ".rar", ".7z", ".tar", ".gz", ".iso"]},
+    {"group_id": "installers", "label": "Installers", "extensions": [".exe", ".msi", ".msix", ".appx"]}
+  ],
+  "custom_extensions": [],
+  "folders": [
+    {
+      "folder_id": "folder-root",
+      "parent_id": null,
+      "path": "F:\\",
+      "name": "F:\\",
+      "depth": 0,
+      "direct_file_count": 0,
+      "recursive_file_count": 1,
+      "direct_logical_bytes": 0,
+      "recursive_logical_bytes": 104857600,
+      "direct_zero_byte_files": 0,
+      "recursive_zero_byte_files": 0,
+      "extension_totals": [
+        {"extension": ".mkv", "direct_file_count": 0, "direct_logical_bytes": 0, "recursive_file_count": 1, "recursive_logical_bytes": 104857600}
+      ],
+      "access": {"state": "normal", "reason_code": "explicit_drive_scope", "explanation": "The fictional drive root was explicitly selected for local analysis."}
+    },
+    {
+      "folder_id": "folder-media",
+      "parent_id": "folder-root",
+      "path": "F:\\Media",
+      "name": "Media",
+      "depth": 1,
+      "direct_file_count": 1,
+      "recursive_file_count": 1,
+      "direct_logical_bytes": 104857600,
+      "recursive_logical_bytes": 104857600,
+      "direct_zero_byte_files": 0,
+      "recursive_zero_byte_files": 0,
+      "extension_totals": [
+        {"extension": ".mkv", "direct_file_count": 1, "direct_logical_bytes": 104857600, "recursive_file_count": 1, "recursive_logical_bytes": 104857600}
+      ],
+      "access": {"state": "normal", "reason_code": "user_content", "explanation": "The fictional media folder is available for manual review."}
+    },
+    {
+      "folder_id": "folder-restricted",
+      "parent_id": "folder-root",
+      "path": "F:\\Restricted",
+      "name": "Restricted",
+      "depth": 1,
+      "direct_file_count": 0,
+      "recursive_file_count": 0,
+      "direct_logical_bytes": 0,
+      "recursive_logical_bytes": 0,
+      "direct_zero_byte_files": 0,
+      "recursive_zero_byte_files": 0,
+      "extension_totals": [],
+      "access": {"state": "unavailable", "reason_code": "access_denied", "explanation": "The fictional path could not be inspected without elevation."}
+    }
+  ],
+  "empty_summary": {"zero_byte_files": 0, "collapsed_tree_count": 0, "trees": []},
+  "file_detail_summary": {
+    "coverage": "complete",
+    "retained_files": 1,
+    "omitted_files": 0,
+    "retained_logical_bytes": 104857600,
+    "omitted_logical_bytes": 0
+  },
+  "files": [
+    {"file_id": "file-001", "folder_id": "folder-media", "path": "F:\\Media\\fictional-demo.mkv", "name": "fictional-demo.mkv", "extension": ".mkv", "size_bytes": 104857600, "modified_at_utc": "2024-02-03T04:05:06Z", "selection_state": "selectable", "protection_reason": "Personal media requires explicit human review."}
+  ],
+  "inaccessible_paths": [
+    {"path": "F:\\Restricted", "error_type": "access_denied", "message": "Access was denied; the remaining fictional drive scan continued."}
+  ],
+  "scan_errors": [
+    {"code": "access_denied", "scope": "directory", "path": "F:\\Restricted", "message": "The directory could not be enumerated; partial totals were retained.", "recoverable": true}
+  ],
+  "limitations": [
+    "Totals are partial because one fictional directory was inaccessible.",
+    "Modification time and extension organise review but do not prove that a file is disposable."
+  ]
+}

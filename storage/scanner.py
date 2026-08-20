@@ -20,6 +20,7 @@ from .classifier import (
     is_development_cache_path,
 )
 from .development import DevelopmentInsightsInspector
+from .folders import FolderAggregate, build_folder_candidates
 from .path_policy import (
     ProtectedPathPolicy,
     UnsafeScanRootError,
@@ -36,7 +37,7 @@ ATTRIBUTE_NAMES = (
     "protected",
     "unavailable",
 )
-from .risk import assess_removal_risk
+from .risk import assess_folder_removal_risk, assess_removal_risk
 from .windows_metadata import get_allocated_size, get_file_identity
 
 class ScanConfigurationError(ValueError):
@@ -51,6 +52,7 @@ class ScannerOptions:
         default_factory=ClassificationOptions
     )
     maximum_candidates_retained: int = 5000
+    maximum_folder_candidates_retained: int = 2000
     maximum_issue_records: int = 1000
     development_cache_roots: tuple[str | Path, ...] = ()
     discover_development_insights: bool = True
@@ -60,6 +62,10 @@ class ScannerOptions:
         if not 1 <= self.maximum_candidates_retained <= 100000:
             raise ValueError(
                 "maximum_candidates_retained must be between 1 and 100000"
+            )
+        if not 1 <= self.maximum_folder_candidates_retained <= 50000:
+            raise ValueError(
+                "maximum_folder_candidates_retained must be between 1 and 50000"
             )
         if not 1 <= self.maximum_issue_records <= 10000:
             raise ValueError(
@@ -84,6 +90,7 @@ class ProgressUpdate:
 class _ScanState:
     started_at: datetime
     maximum_candidates_retained: int
+    maximum_folder_candidates_retained: int
     maximum_issue_records: int
     files_examined: int = 0
     directories_examined: int = 0
@@ -93,6 +100,11 @@ class _ScanState:
     total_candidate_bytes: int = 0
     total_candidate_allocated_bytes: int = 0
     candidate_heap: list[
+        tuple[tuple[int, ...], int, dict[str, Any]]
+    ] = field(default_factory=list)
+    folder_candidate_counter: int = 0
+    largest_folder_candidate_allocated_bytes: int = 0
+    folder_candidate_heap: list[
         tuple[tuple[int, ...], int, dict[str, Any]]
     ] = field(default_factory=list)
     inaccessible_paths: list[dict[str, Any]] = field(default_factory=list)
@@ -115,6 +127,12 @@ class _ScanState:
             for name in ATTRIBUTE_NAMES
         }
     )
+    folder_attribute_summaries: dict[str, dict[str, int]] = field(
+        default_factory=lambda: {
+            name: {"candidate_count": 0, "overlapping_bytes": 0}
+            for name in ATTRIBUTE_NAMES
+        }
+    )
 
     @property
     def omitted_candidates(self) -> int:
@@ -124,6 +142,17 @@ class _ScanState:
     def candidates(self) -> list[dict[str, Any]]:
         return sorted(
             (entry[2] for entry in self.candidate_heap),
+            key=lambda candidate: candidate["candidate_id"],
+        )
+
+    @property
+    def omitted_folder_candidates(self) -> int:
+        return self.folder_candidate_counter - len(self.folder_candidate_heap)
+
+    @property
+    def folder_candidates(self) -> list[dict[str, Any]]:
+        return sorted(
+            (entry[2] for entry in self.folder_candidate_heap),
             key=lambda candidate: candidate["candidate_id"],
         )
 
@@ -142,6 +171,12 @@ def _utc_text(value: datetime) -> str:
 
 def _timestamp_from_epoch(value: float) -> datetime:
     return datetime.fromtimestamp(value, timezone.utc)
+
+
+def _timestamp_ns(metadata: os.stat_result) -> int:
+    return int(
+        getattr(metadata, "st_mtime_ns", int(metadata.st_mtime * 1_000_000_000))
+    )
 
 
 def _absolute_path_text(path: Path) -> str:
@@ -253,6 +288,9 @@ class StorageScanner:
         state = _ScanState(
             started_at=started_at,
             maximum_candidates_retained=options.maximum_candidates_retained,
+            maximum_folder_candidates_retained=(
+                options.maximum_folder_candidates_retained
+            ),
             maximum_issue_records=options.maximum_issue_records,
         )
         root_reports: list[dict[str, Any]] = []
@@ -337,6 +375,12 @@ class StorageScanner:
                 "allocated_bytes_examined": state.allocated_bytes_examined,
                 "candidate_details_retained": len(state.candidates),
                 "candidate_details_omitted": state.omitted_candidates,
+                "folder_candidate_details_retained": len(
+                    state.folder_candidates
+                ),
+                "folder_candidate_details_omitted": (
+                    state.omitted_folder_candidates
+                ),
                 "inaccessible_path_details_retained": len(
                     state.inaccessible_paths
                 ),
@@ -377,6 +421,9 @@ class StorageScanner:
                     "maximum_candidates_retained": (
                         options.maximum_candidates_retained
                     ),
+                    "maximum_folder_candidates_retained": (
+                        options.maximum_folder_candidates_retained
+                    ),
                     "maximum_issue_records": options.maximum_issue_records,
                     "use_last_access_as_classification_evidence": False,
                     "discover_development_insights": (
@@ -405,6 +452,17 @@ class StorageScanner:
                 "attributes": state.attribute_summaries,
             },
             "candidates": state.candidates,
+            "folder_candidate_summary": {
+                "accounting_method": "overlapping_hierarchy",
+                "total_candidates": state.folder_candidate_counter,
+                "retained_candidates": len(state.folder_candidates),
+                "omitted_candidates": state.omitted_folder_candidates,
+                "largest_candidate_allocated_bytes": (
+                    state.largest_folder_candidate_allocated_bytes
+                ),
+                "attributes": state.folder_attribute_summaries,
+            },
+            "folder_candidates": state.folder_candidates,
             "inaccessible_paths": state.inaccessible_paths,
             "scan_errors": state.scan_errors,
             "development_insights": development_inspector.build_report(
@@ -442,24 +500,51 @@ class StorageScanner:
         root_bytes = 0
         root_allocated_bytes = 0
         root_errors_before = state.scan_error_counter
-        stack = [
+        try:
+            root_metadata = os.lstat(root)
+            root_created_at = _timestamp_from_epoch(root_metadata.st_ctime)
+            root_modified_at = _timestamp_from_epoch(root_metadata.st_mtime)
+        except (OSError, OverflowError, ValueError):
+            root_created_at = state.started_at
+            root_modified_at = state.started_at
+        root_category = self._path_policy.protected_category(
+            root, drive_letter
+        )
+        root_risk = assess_folder_removal_risk(
+            root,
             (
-                root,
-                self._path_policy.protected_category(root, drive_letter),
+                ("development_cache",)
+                if is_development_cache_path(root, development_cache_roots)
+                else ()
+            ),
+        )
+        folder_aggregates: dict[Path, FolderAggregate] = {
+            root: FolderAggregate(
+                path=root,
+                scan_root=root,
+                created_at_utc=root_created_at,
+                directory_modified_at_utc=root_modified_at,
+                protected_category=root_category,
+                contains_high_risk_items=(
+                    root_category is not None or root_risk.level == "high"
+                ),
             )
-        ]
+        }
+        stack = [(root, root_category)]
 
         while stack and not state.cancelled:
             if cancel_check():
                 state.cancelled = True
                 break
             directory, directory_category = stack.pop()
+            directory_aggregate = folder_aggregates[directory]
             try:
                 with os.scandir(directory) as iterator:
                     entries = sorted(iterator, key=lambda entry: entry.name.casefold())
                 state.directories_examined += 1
                 root_directories += 1
             except OSError as error:
+                directory_aggregate.mark_unavailable()
                 self._record_os_error(
                     state=state,
                     path=directory,
@@ -479,6 +564,7 @@ class StorageScanner:
                 try:
                     metadata = entry.stat(follow_symlinks=False)
                 except OSError as error:
+                    directory_aggregate.mark_unavailable()
                     self._record_os_error(
                         state=state,
                         path=path,
@@ -490,6 +576,8 @@ class StorageScanner:
                     continue
 
                 if is_reparse_point(path, metadata):
+                    directory_aggregate.mark_unavailable()
+                    directory_aggregate.mark_high_risk()
                     self._record_reparse_point(state, path, root)
                     continue
                 protected_category = (
@@ -497,17 +585,79 @@ class StorageScanner:
                     or self._path_policy.protected_category(path, drive_letter)
                 )
                 if stat.S_ISDIR(metadata.st_mode):
+                    try:
+                        directory_created_at = _timestamp_from_epoch(
+                            metadata.st_ctime
+                        )
+                        directory_modified_at = _timestamp_from_epoch(
+                            metadata.st_mtime
+                        )
+                    except (OSError, OverflowError, ValueError):
+                        directory_created_at = state.started_at
+                        directory_modified_at = state.started_at
+                    directory_risk = assess_folder_removal_risk(
+                        path,
+                        (
+                            ("development_cache",)
+                            if is_development_cache_path(
+                                path, development_cache_roots
+                            )
+                            else ()
+                        ),
+                    )
+                    folder_aggregates[path] = FolderAggregate(
+                        path=path,
+                        scan_root=root,
+                        created_at_utc=directory_created_at,
+                        directory_modified_at_utc=directory_modified_at,
+                        protected_category=protected_category,
+                        contains_high_risk_items=(
+                            protected_category is not None
+                            or directory_risk.level == "high"
+                        ),
+                    )
                     stack.append((path, protected_category))
                     continue
                 if not stat.S_ISREG(metadata.st_mode):
                     continue
 
-                identity = self._file_identity(path, metadata)
-                if identity in state.seen_file_identities:
-                    continue
-                state.seen_file_identities.add(identity)
-
                 size_bytes = max(0, int(metadata.st_size))
+                try:
+                    created_at = _timestamp_from_epoch(metadata.st_ctime)
+                    modified_at = _timestamp_from_epoch(metadata.st_mtime)
+                    accessed_at = _timestamp_from_epoch(metadata.st_atime)
+                except (OSError, OverflowError, ValueError) as error:
+                    directory_aggregate.observe_file_entry(
+                        name=path.name,
+                        modified_at_utc=None,
+                        modified_ns=None,
+                        attributes=(),
+                        logical_bytes=size_bytes,
+                        high_risk=(
+                            protected_category is not None
+                            or assess_removal_risk(path, ()).level == "high"
+                        ),
+                    )
+                    self._record_os_error(
+                        state=state,
+                        path=path,
+                        scan_root=root,
+                        error=error,
+                        scope="file",
+                        retain_unavailable_candidate=True,
+                    )
+                    continue
+
+                folder_classification = None
+                if protected_category is None:
+                    folder_classification = classify_file(
+                        path=path,
+                        size_bytes=size_bytes,
+                        modified_at_utc=modified_at,
+                        observed_at_utc=state.started_at,
+                        options=options.classification,
+                        development_cache_roots=development_cache_roots,
+                    )
                 try:
                     allocated_size_bytes: int | None = self._allocated_size(
                         path,
@@ -527,12 +677,44 @@ class StorageScanner:
                             "the remaining scan continued."
                         ),
                     )
+                    directory_aggregate.mark_unavailable()
+                directory_aggregate.observe_file_entry(
+                    name=path.name,
+                    modified_at_utc=modified_at,
+                    modified_ns=_timestamp_ns(metadata),
+                    attributes=(
+                        folder_classification.attributes
+                        if folder_classification is not None
+                        else ()
+                    ),
+                    logical_bytes=size_bytes,
+                    allocated_bytes=allocated_size_bytes,
+                    high_risk=(
+                        protected_category is not None
+                        or assess_removal_risk(
+                            path,
+                            (
+                                folder_classification.attributes
+                                if folder_classification is not None
+                                else ()
+                            ),
+                        ).level
+                        == "high"
+                    ),
+                )
+
+                identity = self._file_identity(path, metadata)
+                if identity in state.seen_file_identities:
+                    continue
+                state.seen_file_identities.add(identity)
+
                 state.files_examined += 1
                 state.bytes_examined += size_bytes
                 state.allocated_bytes_examined += allocated_size_bytes or 0
                 root_files += 1
                 root_bytes += size_bytes
                 root_allocated_bytes += allocated_size_bytes or 0
+                directory_aggregate.observe_unique_file()
 
                 if protected_category is not None:
                     state.category_allocated_bytes[protected_category] += (
@@ -573,29 +755,9 @@ class StorageScanner:
                         )
                     continue
 
-                try:
-                    created_at = _timestamp_from_epoch(metadata.st_ctime)
-                    modified_at = _timestamp_from_epoch(metadata.st_mtime)
-                    accessed_at = _timestamp_from_epoch(metadata.st_atime)
-                except (OSError, OverflowError, ValueError) as error:
-                    self._record_os_error(
-                        state=state,
-                        path=path,
-                        scan_root=root,
-                        error=error,
-                        scope="file",
-                        retain_unavailable_candidate=True,
-                    )
+                result = folder_classification
+                if result is None:
                     continue
-
-                result = classify_file(
-                    path=path,
-                    size_bytes=size_bytes,
-                    modified_at_utc=modified_at,
-                    observed_at_utc=state.started_at,
-                    options=options.classification,
-                    development_cache_roots=development_cache_roots,
-                )
                 if result.attributes:
                     removal_risk = assess_removal_risk(
                         path,
@@ -603,6 +765,7 @@ class StorageScanner:
                     )
                     candidate = {
                         "candidate_id": self._next_candidate_id(state),
+                        "item_type": "file",
                         "path": _absolute_path_text(path),
                         "scan_root": str(root),
                         "name": path.name,
@@ -624,6 +787,7 @@ class StorageScanner:
                             "explanation": removal_risk.explanation,
                         },
                         "is_regular_file": True,
+                        "is_directory": False,
                         "is_reparse_point": False,
                     }
                     self._record_candidate(state, candidate)
@@ -633,6 +797,20 @@ class StorageScanner:
                     and state.files_examined % options.progress_every_files == 0
                 ):
                     progress_callback(self._progress_update(state, str(path)))
+
+        if state.cancelled:
+            for aggregate in folder_aggregates.values():
+                aggregate.mark_unavailable()
+        for folder_candidate in build_folder_candidates(
+            folder_aggregates,
+            observed_at_utc=state.started_at,
+            options=options.classification,
+            development_cache_roots=development_cache_roots,
+        ):
+            folder_candidate["candidate_id"] = self._next_folder_candidate_id(
+                state
+            )
+            self._record_folder_candidate(state, folder_candidate)
 
         root_error_count = state.scan_error_counter - root_errors_before
         status = (
@@ -686,6 +864,10 @@ class StorageScanner:
         return f"candidate-{state.candidate_counter + 1:06d}"
 
     @staticmethod
+    def _next_folder_candidate_id(state: _ScanState) -> str:
+        return f"folder-{state.folder_candidate_counter + 1:06d}"
+
+    @staticmethod
     def _record_candidate(
         state: _ScanState,
         candidate: dict[str, Any],
@@ -709,6 +891,34 @@ class StorageScanner:
             heapq.heapreplace(state.candidate_heap, entry)
 
     @staticmethod
+    def _record_folder_candidate(
+        state: _ScanState,
+        candidate: dict[str, Any],
+    ) -> None:
+        state.folder_candidate_counter += 1
+        allocated_size = candidate.get("allocated_size_bytes") or 0
+        state.largest_folder_candidate_allocated_bytes = max(
+            state.largest_folder_candidate_allocated_bytes,
+            allocated_size,
+        )
+        for attribute in candidate["attributes"]:
+            summary = state.folder_attribute_summaries[attribute]
+            summary["candidate_count"] += 1
+            summary["overlapping_bytes"] += allocated_size
+        priority = StorageScanner._candidate_priority(
+            candidate,
+            state.folder_candidate_counter,
+        )
+        entry = (priority, state.folder_candidate_counter, candidate)
+        if (
+            len(state.folder_candidate_heap)
+            < state.maximum_folder_candidates_retained
+        ):
+            heapq.heappush(state.folder_candidate_heap, entry)
+        elif priority > state.folder_candidate_heap[0][0]:
+            heapq.heapreplace(state.folder_candidate_heap, entry)
+
+    @staticmethod
     def _candidate_priority(
         candidate: dict[str, Any],
         ordinal: int,
@@ -726,7 +936,13 @@ class StorageScanner:
         risk_weights = {"low": 3, "medium": 2, "high": 1, "protected": 0}
         confidence_weights = {"high": 3, "medium": 2, "low": 1}
         eligibility = candidate["protection"]["eligibility"]
+        physical_size = (
+            candidate.get("allocated_size_bytes")
+            if candidate.get("allocated_size_bytes") is not None
+            else candidate.get("size_bytes") or 0
+        )
         return (
+            physical_size,
             1 if eligibility == "eligible" else 0,
             risk_weights.get(candidate.get("removal_risk", "protected"), 0),
             sum(
@@ -734,9 +950,6 @@ class StorageScanner:
                 for attribute in candidate["attributes"]
             ),
             confidence_weights.get(candidate["confidence"], 0),
-            candidate.get("allocated_size_bytes")
-            or candidate.get("size_bytes")
-            or 0,
             -ordinal,
         )
 
@@ -967,7 +1180,7 @@ class StorageScanner:
     def _detail_coverage(state: _ScanState, status: str) -> str:
         if status != "complete":
             return "partial"
-        if state.omitted_candidates:
+        if state.omitted_candidates or state.omitted_folder_candidates:
             return "bounded"
         return "complete"
 
@@ -1106,6 +1319,15 @@ class StorageScanner:
                 f"{state.omitted_candidates} candidate detail record(s) were "
                 "omitted by the configured limit; aggregate totals include them."
             )
+        if state.omitted_folder_candidates:
+            limitations.append(
+                f"{state.omitted_folder_candidates} folder candidate detail "
+                "record(s) were omitted by the configured limit."
+            )
+        limitations.append(
+            "Folder sizes can overlap across parent and child candidates; the "
+            "dashboard never adds them together as unique recoverable space."
+        )
         if state.omitted_inaccessible_paths:
             limitations.append(
                 f"{state.omitted_inaccessible_paths} additional inaccessible-path "

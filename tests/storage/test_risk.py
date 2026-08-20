@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from storage.risk import assess_removal_risk
+from storage.risk import assess_folder_removal_risk, assess_removal_risk
 
 
 def test_installer_in_application_data_is_review_only() -> None:
@@ -41,4 +41,36 @@ def test_ordinary_stale_file_remains_medium_risk() -> None:
     )
 
     assert result.level == "medium"
+    assert result.eligibility == "eligible"
+
+
+def test_save_folder_is_high_risk_and_review_only() -> None:
+    result = assess_folder_removal_risk(
+        Path(r"C:\Users\fictional\Saved Games\Cyberpunk"),
+        ("stale", "large"),
+    )
+
+    assert result.level == "high"
+    assert result.eligibility == "review_only"
+    assert result.reason_code == "possible_save_data_tree"
+
+
+def test_large_only_folder_is_not_cleanup_eligible() -> None:
+    result = assess_folder_removal_risk(
+        Path(r"F:\Games\CurrentGame"),
+        ("large",),
+    )
+
+    assert result.level == "high"
+    assert result.eligibility == "review_only"
+    assert result.reason_code == "size_only_folder_evidence"
+
+
+def test_empty_ordinary_folder_is_low_risk_and_eligible() -> None:
+    result = assess_folder_removal_risk(
+        Path(r"C:\Users\fictional\Downloads\Old Empty"),
+        ("empty",),
+    )
+
+    assert result.level == "low"
     assert result.eligibility == "eligible"
