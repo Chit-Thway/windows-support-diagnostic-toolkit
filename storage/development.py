@@ -16,6 +16,7 @@ from .path_policy import is_path_within, is_reparse_point
 
 COMMAND_TIMEOUT_SECONDS = 8
 MAX_COMMAND_OUTPUT_CHARACTERS = 32_768
+MAX_DEVELOPMENT_ERRORS = 100
 
 
 @dataclass(frozen=True)
@@ -100,6 +101,7 @@ class DevelopmentInsightsInspector:
         self._enabled = enabled
         self._locations: dict[tuple[str, str], _ObservedLocation] = {}
         self._errors: list[dict[str, str]] = []
+        self._error_count = 0
         if active_python_environments is None:
             active_values: list[str | Path] = []
             if sys.prefix != sys.base_prefix:
@@ -119,9 +121,11 @@ class DevelopmentInsightsInspector:
             self._discover_java_runtime()
 
     def _record_error(self, ecosystem: str, code: str, message: str) -> None:
-        self._errors.append(
-            {"ecosystem": ecosystem, "code": code, "message": message}
-        )
+        self._error_count += 1
+        if len(self._errors) < MAX_DEVELOPMENT_ERRORS:
+            self._errors.append(
+                {"ecosystem": ecosystem, "code": code, "message": message}
+            )
 
     def _run_supported_command(
         self, command: Sequence[str], *, ecosystem: str, error_code: str
@@ -410,20 +414,29 @@ class DevelopmentInsightsInspector:
                 }
             )
 
+        errors_omitted = self._error_count - len(self._errors)
+        limitations = [
+            "Only pyvenv.cfg metadata identifies Python environments; age does not prove an environment is abandoned.",
+            "Development locations outside selected scan roots are displayed but not measured recursively.",
+            "No cross-vendor Java cache is assumed because Java distributions do not expose one universal supported cache location.",
+            "Runtimes and environments are informational and never automatic cleanup candidates.",
+        ]
+        if errors_omitted:
+            limitations.append(
+                f"{errors_omitted} additional development-discovery error "
+                "record(s) were omitted by the safety limit."
+            )
+
         return {
             "status": (
                 "unavailable"
                 if not self._enabled
                 else "partial"
-                if self._errors
+                if self._error_count
                 else "complete"
             ),
             "locations": locations,
             "errors": self._errors,
-            "limitations": [
-                "Only pyvenv.cfg metadata identifies Python environments; age does not prove an environment is abandoned.",
-                "Development locations outside selected scan roots are displayed but not measured recursively.",
-                "No cross-vendor Java cache is assumed because Java distributions do not expose one universal supported cache location.",
-                "Runtimes and environments are informational and never automatic cleanup candidates.",
-            ],
+            "errors_omitted": errors_omitted,
+            "limitations": limitations,
         }

@@ -147,6 +147,27 @@ def test_directory_and_protected_candidate_fail_closed(
     assert protected["status"] == "skipped_protected_or_invalid"
 
 
+def test_current_risk_policy_blocks_installer_even_from_older_eligible_report(
+    storage_fixture, tmp_path
+) -> None:
+    report, candidate, _path = build_candidate_report(
+        storage_fixture,
+        tmp_path,
+        name="Zoom.msi",
+    )
+    recycled: list[Path] = []
+
+    record = execute_guided_cleanup(
+        report,
+        [candidate],
+        recycler=lambda path: recycled.append(path),
+    )
+
+    assert recycled == []
+    assert record["summary"]["skipped_protected_or_invalid"] == 1
+    assert "removal-risk policy" in record["results"][0]["message"]
+
+
 def test_candidate_outside_reported_root_fails_closed(
     storage_fixture, tmp_path
 ) -> None:
@@ -219,6 +240,15 @@ def test_empty_or_duplicate_internal_selection_is_rejected(
             report, [candidate, candidate], recycler=lambda _path: None
         )
 
+    duplicate_path = copy.deepcopy(candidate)
+    duplicate_path["candidate_id"] = "cleanup-002"
+    with pytest.raises(CleanupRecordError, match="same reviewed path twice"):
+        execute_guided_cleanup(
+            report,
+            [candidate, duplicate_path],
+            recycler=lambda _path: None,
+        )
+
 
 def test_detected_reparse_point_is_never_recycled(
     storage_fixture, tmp_path, monkeypatch
@@ -235,6 +265,52 @@ def test_detected_reparse_point_is_never_recycled(
 
     assert recycled == []
     assert record["summary"]["skipped_protected_or_invalid"] == 1
+
+
+def test_reparse_point_in_parent_path_is_never_recycled(
+    storage_fixture, tmp_path, monkeypatch
+) -> None:
+    report, candidate, _path = build_candidate_report(storage_fixture, tmp_path)
+    monkeypatch.setattr(
+        "storage.cleanup._has_reparse_component",
+        lambda *_args: True,
+    )
+    recycled: list[Path] = []
+
+    record = execute_guided_cleanup(
+        report,
+        [candidate],
+        recycler=lambda path: recycled.append(path),
+    )
+
+    assert recycled == []
+    assert record["summary"]["skipped_protected_or_invalid"] == 1
+    assert "reparse point or link" in record["results"][0]["message"]
+
+
+def test_unreadable_metadata_fails_safely_before_recycler(
+    storage_fixture, tmp_path, monkeypatch
+) -> None:
+    report, candidate, path = build_candidate_report(storage_fixture, tmp_path)
+    original_lstat = os.lstat
+
+    def denied_lstat(value):
+        if Path(value) == path:
+            raise PermissionError("simulated locked metadata")
+        return original_lstat(value)
+
+    monkeypatch.setattr("storage.cleanup.os.lstat", denied_lstat)
+    recycled: list[Path] = []
+
+    record = execute_guided_cleanup(
+        report,
+        [candidate],
+        recycler=lambda reviewed: recycled.append(reviewed),
+    )
+
+    assert recycled == []
+    assert record["summary"]["failed"] == 1
+    assert path.exists()
 
 
 def test_cleanup_module_has_no_permanent_delete_or_directory_remove_calls() -> None:

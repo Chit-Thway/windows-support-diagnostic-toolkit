@@ -70,3 +70,20 @@ def test_development_discovery_is_enabled_by_default_and_can_be_disabled() -> No
 
     assert default.no_development_insights is False
     assert disabled.no_development_insights is True
+
+
+def test_issue_record_limit_is_bounded_and_configurable() -> None:
+    parser = storage_cli.build_parser()
+
+    default = parser.parse_args(["--root", r"C:\FictionalRoot"])
+    custom = parser.parse_args(
+        [
+            "--root",
+            r"C:\FictionalRoot",
+            "--max-issue-records",
+            "25",
+        ]
+    )
+
+    assert default.max_issue_records == 1000
+    assert custom.max_issue_records == 25

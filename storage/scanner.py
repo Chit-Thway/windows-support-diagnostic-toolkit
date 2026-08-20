@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ctypes
+import heapq
 import os
 import shutil
 import stat
@@ -35,7 +36,8 @@ ATTRIBUTE_NAMES = (
     "protected",
     "unavailable",
 )
-
+from .risk import assess_removal_risk
+from .windows_metadata import get_allocated_size, get_file_identity
 
 class ScanConfigurationError(ValueError):
     """Raised when scanner inputs cannot produce a safe per-drive scan."""
@@ -49,6 +51,7 @@ class ScannerOptions:
         default_factory=ClassificationOptions
     )
     maximum_candidates_retained: int = 5000
+    maximum_issue_records: int = 1000
     development_cache_roots: tuple[str | Path, ...] = ()
     discover_development_insights: bool = True
     progress_every_files: int = 100
@@ -57,6 +60,10 @@ class ScannerOptions:
         if not 1 <= self.maximum_candidates_retained <= 100000:
             raise ValueError(
                 "maximum_candidates_retained must be between 1 and 100000"
+            )
+        if not 1 <= self.maximum_issue_records <= 10000:
+            raise ValueError(
+                "maximum_issue_records must be between 1 and 10000"
             )
         if self.progress_every_files < 1:
             raise ValueError("progress_every_files must be at least 1")
@@ -77,17 +84,30 @@ class ProgressUpdate:
 class _ScanState:
     started_at: datetime
     maximum_candidates_retained: int
+    maximum_issue_records: int
     files_examined: int = 0
     directories_examined: int = 0
     bytes_examined: int = 0
+    allocated_bytes_examined: int = 0
     candidate_counter: int = 0
     total_candidate_bytes: int = 0
-    candidates: list[dict[str, Any]] = field(default_factory=list)
+    total_candidate_allocated_bytes: int = 0
+    candidate_heap: list[
+        tuple[tuple[int, ...], int, dict[str, Any]]
+    ] = field(default_factory=list)
     inaccessible_paths: list[dict[str, Any]] = field(default_factory=list)
     scan_errors: list[dict[str, Any]] = field(default_factory=list)
+    inaccessible_path_counter: int = 0
+    scan_error_counter: int = 0
     seen_file_identities: set[tuple[object, ...]] = field(default_factory=set)
-    user_content_bytes: int = 0
-    development_storage_bytes: int = 0
+    category_allocated_bytes: dict[str, int] = field(
+        default_factory=lambda: {
+            "protected_system": 0,
+            "installed_applications": 0,
+            "user_content": 0,
+            "development_tools_and_caches": 0,
+        }
+    )
     cancelled: bool = False
     attribute_summaries: dict[str, dict[str, int]] = field(
         default_factory=lambda: {
@@ -98,7 +118,22 @@ class _ScanState:
 
     @property
     def omitted_candidates(self) -> int:
-        return self.candidate_counter - len(self.candidates)
+        return self.candidate_counter - len(self.candidate_heap)
+
+    @property
+    def candidates(self) -> list[dict[str, Any]]:
+        return sorted(
+            (entry[2] for entry in self.candidate_heap),
+            key=lambda candidate: candidate["candidate_id"],
+        )
+
+    @property
+    def omitted_inaccessible_paths(self) -> int:
+        return self.inaccessible_path_counter - len(self.inaccessible_paths)
+
+    @property
+    def omitted_scan_errors(self) -> int:
+        return self.scan_error_counter - len(self.scan_errors)
 
 
 def _utc_text(value: datetime) -> str:
@@ -156,6 +191,8 @@ class StorageScanner:
         development_inspector_factory: (
             Callable[..., DevelopmentInsightsInspector] | None
         ) = None,
+        allocated_size: Callable[[Path, int], int] | None = None,
+        file_identity: Callable[[Path], tuple[object, ...]] | None = None,
     ) -> None:
         self._path_policy = path_policy or ProtectedPathPolicy()
         self._clock = clock or (lambda: datetime.now(timezone.utc))
@@ -164,6 +201,8 @@ class StorageScanner:
         self._development_inspector_factory = (
             development_inspector_factory or DevelopmentInsightsInspector
         )
+        self._allocated_size = allocated_size or get_allocated_size
+        self._file_identity_reader = file_identity or get_file_identity
 
     def scan(
         self,
@@ -214,6 +253,7 @@ class StorageScanner:
         state = _ScanState(
             started_at=started_at,
             maximum_candidates_retained=options.maximum_candidates_retained,
+            maximum_issue_records=options.maximum_issue_records,
         )
         root_reports: list[dict[str, Any]] = []
 
@@ -294,8 +334,17 @@ class StorageScanner:
                 "files_examined": state.files_examined,
                 "directories_examined": state.directories_examined,
                 "bytes_examined": state.bytes_examined,
+                "allocated_bytes_examined": state.allocated_bytes_examined,
                 "candidate_details_retained": len(state.candidates),
                 "candidate_details_omitted": state.omitted_candidates,
+                "inaccessible_path_details_retained": len(
+                    state.inaccessible_paths
+                ),
+                "inaccessible_path_details_omitted": (
+                    state.omitted_inaccessible_paths
+                ),
+                "scan_error_details_retained": len(state.scan_errors),
+                "scan_error_details_omitted": state.omitted_scan_errors,
             },
             "drive": {
                 "drive_letter": drive_letter,
@@ -328,6 +377,7 @@ class StorageScanner:
                     "maximum_candidates_retained": (
                         options.maximum_candidates_retained
                     ),
+                    "maximum_issue_records": options.maximum_issue_records,
                     "use_last_access_as_classification_evidence": False,
                     "discover_development_insights": (
                         options.discover_development_insights
@@ -344,6 +394,13 @@ class StorageScanner:
                     candidate["size_bytes"] or 0
                     for candidate in state.candidates
                 ),
+                "total_unique_candidate_allocated_bytes": (
+                    state.total_candidate_allocated_bytes
+                ),
+                "retained_unique_candidate_allocated_bytes": sum(
+                    candidate.get("allocated_size_bytes") or 0
+                    for candidate in state.candidates
+                ),
                 "omitted_candidates": state.omitted_candidates,
                 "attributes": state.attribute_summaries,
             },
@@ -353,7 +410,13 @@ class StorageScanner:
             "development_insights": development_inspector.build_report(
                 scan_status=status
             ),
-            "limitations": self._limitations(state, development_cache_roots),
+            "limitations": self._limitations(
+                state,
+                development_cache_roots,
+                whole_drive_scan=any(
+                    root == Path(f"{root.drive}\\") for root in scan_roots
+                ),
+            ),
         }
 
         if progress_callback is not None:
@@ -377,14 +440,20 @@ class StorageScanner:
         root_files = 0
         root_directories = 0
         root_bytes = 0
-        root_errors_before = len(state.scan_errors)
-        stack = [root]
+        root_allocated_bytes = 0
+        root_errors_before = state.scan_error_counter
+        stack = [
+            (
+                root,
+                self._path_policy.protected_category(root, drive_letter),
+            )
+        ]
 
         while stack and not state.cancelled:
             if cancel_check():
                 state.cancelled = True
                 break
-            directory = stack.pop()
+            directory, directory_category = stack.pop()
             try:
                 with os.scandir(directory) as iterator:
                     entries = sorted(iterator, key=lambda entry: entry.name.casefold())
@@ -400,7 +469,8 @@ class StorageScanner:
                 )
                 continue
 
-            development_inspector.observe_directory(directory, entries)
+            if directory_category is None:
+                development_inspector.observe_directory(directory, entries)
             for entry in entries:
                 if cancel_check():
                     state.cancelled = True
@@ -422,11 +492,12 @@ class StorageScanner:
                 if is_reparse_point(path, metadata):
                     self._record_reparse_point(state, path, root)
                     continue
-                if self._path_policy.is_protected(path, drive_letter):
-                    self._record_protected_path(state, path, root)
-                    continue
+                protected_category = (
+                    directory_category
+                    or self._path_policy.protected_category(path, drive_letter)
+                )
                 if stat.S_ISDIR(metadata.st_mode):
-                    stack.append(path)
+                    stack.append((path, protected_category))
                     continue
                 if not stat.S_ISREG(metadata.st_mode):
                     continue
@@ -437,10 +508,46 @@ class StorageScanner:
                 state.seen_file_identities.add(identity)
 
                 size_bytes = max(0, int(metadata.st_size))
+                try:
+                    allocated_size_bytes: int | None = self._allocated_size(
+                        path,
+                        size_bytes,
+                    )
+                except OSError:
+                    allocated_size_bytes = None
+                    self._record_path_issue(
+                        state=state,
+                        path=path,
+                        scan_root=root,
+                        error_type="unreadable_metadata",
+                        code="allocated_size_unavailable",
+                        scope="file",
+                        message=(
+                            "Windows could not report the file's allocated size; "
+                            "the remaining scan continued."
+                        ),
+                    )
                 state.files_examined += 1
                 state.bytes_examined += size_bytes
+                state.allocated_bytes_examined += allocated_size_bytes or 0
                 root_files += 1
                 root_bytes += size_bytes
+                root_allocated_bytes += allocated_size_bytes or 0
+
+                if protected_category is not None:
+                    state.category_allocated_bytes[protected_category] += (
+                        allocated_size_bytes or 0
+                    )
+                    if (
+                        progress_callback is not None
+                        and state.files_examined
+                        % options.progress_every_files
+                        == 0
+                    ):
+                        progress_callback(
+                            self._progress_update(state, str(path))
+                        )
+                    continue
 
                 in_cache = is_development_cache_path(
                     path, development_cache_roots
@@ -449,9 +556,12 @@ class StorageScanner:
                     development_inspector.observe_file(path, size_bytes)
                 )
                 if in_cache or in_discovered_development_location:
-                    state.development_storage_bytes += size_bytes
+                    storage_category = "development_tools_and_caches"
                 else:
-                    state.user_content_bytes += size_bytes
+                    storage_category = "user_content"
+                state.category_allocated_bytes[storage_category] += (
+                    allocated_size_bytes or 0
+                )
 
                 if in_discovered_development_location:
                     if (
@@ -487,6 +597,10 @@ class StorageScanner:
                     development_cache_roots=development_cache_roots,
                 )
                 if result.attributes:
+                    removal_risk = assess_removal_risk(
+                        path,
+                        result.attributes,
+                    )
                     candidate = {
                         "candidate_id": self._next_candidate_id(state),
                         "path": _absolute_path_text(path),
@@ -494,6 +608,7 @@ class StorageScanner:
                         "name": path.name,
                         "extension": path.suffix.casefold() or None,
                         "size_bytes": size_bytes,
+                        "allocated_size_bytes": allocated_size_bytes,
                         "created_at_utc": _utc_text(created_at),
                         "modified_at_utc": _utc_text(modified_at),
                         "last_accessed_at_utc": _utc_text(accessed_at),
@@ -502,13 +617,11 @@ class StorageScanner:
                         "attributes": list(result.attributes),
                         "evidence": list(result.evidence),
                         "confidence": result.confidence,
+                        "removal_risk": removal_risk.level,
                         "protection": {
-                            "eligibility": "eligible",
-                            "reason_code": None,
-                            "explanation": (
-                                "The regular file is inside an approved scan "
-                                "root and is not a detected reparse point."
-                            ),
+                            "eligibility": removal_risk.eligibility,
+                            "reason_code": removal_risk.reason_code,
+                            "explanation": removal_risk.explanation,
                         },
                         "is_regular_file": True,
                         "is_reparse_point": False,
@@ -521,7 +634,7 @@ class StorageScanner:
                 ):
                     progress_callback(self._progress_update(state, str(path)))
 
-        root_error_count = len(state.scan_errors) - root_errors_before
+        root_error_count = state.scan_error_counter - root_errors_before
         status = (
             "cancelled"
             if state.cancelled
@@ -535,6 +648,7 @@ class StorageScanner:
             "files_examined": root_files,
             "directories_examined": root_directories,
             "bytes_examined": root_bytes,
+            "allocated_bytes_examined": root_allocated_bytes,
             "errors_count": root_error_count,
         }
 
@@ -548,11 +662,19 @@ class StorageScanner:
             "files_examined": 0,
             "directories_examined": 0,
             "bytes_examined": 0,
+            "allocated_bytes_examined": 0,
             "errors_count": 0,
         }
 
-    @staticmethod
-    def _file_identity(path: Path, metadata: os.stat_result) -> tuple[object, ...]:
+    def _file_identity(
+        self,
+        path: Path,
+        metadata: os.stat_result,
+    ) -> tuple[object, ...]:
+        try:
+            return self._file_identity_reader(path)
+        except OSError:
+            pass
         inode = getattr(metadata, "st_ino", 0)
         device = getattr(metadata, "st_dev", 0)
         if inode:
@@ -570,12 +692,53 @@ class StorageScanner:
     ) -> None:
         state.candidate_counter += 1
         size_bytes = candidate["size_bytes"] or 0
+        allocated_size_bytes = candidate.get("allocated_size_bytes") or 0
         state.total_candidate_bytes += size_bytes
+        state.total_candidate_allocated_bytes += allocated_size_bytes
         for attribute in candidate["attributes"]:
             state.attribute_summaries[attribute]["candidate_count"] += 1
             state.attribute_summaries[attribute]["unique_bytes"] += size_bytes
-        if len(state.candidates) < state.maximum_candidates_retained:
-            state.candidates.append(candidate)
+        priority = StorageScanner._candidate_priority(
+            candidate,
+            state.candidate_counter,
+        )
+        entry = (priority, state.candidate_counter, candidate)
+        if len(state.candidate_heap) < state.maximum_candidates_retained:
+            heapq.heappush(state.candidate_heap, entry)
+        elif priority > state.candidate_heap[0][0]:
+            heapq.heapreplace(state.candidate_heap, entry)
+
+    @staticmethod
+    def _candidate_priority(
+        candidate: dict[str, Any],
+        ordinal: int,
+    ) -> tuple[int, ...]:
+        attribute_weights = {
+            "likely_incomplete": 6,
+            "temporary": 5,
+            "empty": 4,
+            "development_cache": 3,
+            "stale": 2,
+            "large": 1,
+            "protected": 0,
+            "unavailable": 0,
+        }
+        risk_weights = {"low": 3, "medium": 2, "high": 1, "protected": 0}
+        confidence_weights = {"high": 3, "medium": 2, "low": 1}
+        eligibility = candidate["protection"]["eligibility"]
+        return (
+            1 if eligibility == "eligible" else 0,
+            risk_weights.get(candidate.get("removal_risk", "protected"), 0),
+            sum(
+                attribute_weights.get(attribute, 0)
+                for attribute in candidate["attributes"]
+            ),
+            confidence_weights.get(candidate["confidence"], 0),
+            candidate.get("allocated_size_bytes")
+            or candidate.get("size_bytes")
+            or 0,
+            -ordinal,
+        )
 
     def _record_unavailable_candidate(
         self,
@@ -592,6 +755,7 @@ class StorageScanner:
             "name": path.name or str(path),
             "extension": path.suffix.casefold() or None,
             "size_bytes": None,
+            "allocated_size_bytes": None,
             "created_at_utc": None,
             "modified_at_utc": None,
             "last_accessed_at_utc": None,
@@ -607,6 +771,7 @@ class StorageScanner:
                 }
             ],
             "confidence": "low",
+            "removal_risk": "protected",
             "protection": {
                 "eligibility": "unavailable",
                 "reason_code": code,
@@ -645,6 +810,7 @@ class StorageScanner:
             "name": path.name or str(path),
             "extension": path.suffix.casefold() or None,
             "size_bytes": None,
+            "allocated_size_bytes": None,
             "created_at_utc": None,
             "modified_at_utc": None,
             "last_accessed_at_utc": None,
@@ -660,6 +826,7 @@ class StorageScanner:
                 }
             ],
             "confidence": "high",
+            "removal_risk": "protected",
             "protection": {
                 "eligibility": "protected",
                 "reason_code": "reparse_point",
@@ -742,24 +909,25 @@ class StorageScanner:
         message: str,
     ) -> None:
         occurred_at = _utc_text(self._clock().astimezone(timezone.utc))
-        state.inaccessible_paths.append(
-            {
-                "path": _absolute_path_text(path),
-                "scan_root": str(scan_root),
-                "error_type": error_type,
-                "message": message,
-                "occurred_at_utc": occurred_at,
-            }
-        )
-        state.scan_errors.append(
-            {
-                "code": code,
-                "scope": scope,
-                "path": _absolute_path_text(path),
-                "message": message,
-                "recoverable": True,
-                "occurred_at_utc": occurred_at,
-            }
+        state.inaccessible_path_counter += 1
+        if len(state.inaccessible_paths) < state.maximum_issue_records:
+            state.inaccessible_paths.append(
+                {
+                    "path": _absolute_path_text(path),
+                    "scan_root": str(scan_root),
+                    "error_type": error_type,
+                    "message": message,
+                    "occurred_at_utc": occurred_at,
+                }
+            )
+        self._record_scan_error(
+            state,
+            code=code,
+            scope=scope,
+            path=_absolute_path_text(path),
+            message=message,
+            recoverable=True,
+            occurred_at=occurred_at,
         )
 
     def _record_scan_error(
@@ -771,25 +939,27 @@ class StorageScanner:
         path: str | None,
         message: str,
         recoverable: bool,
+        occurred_at: str | None = None,
     ) -> None:
-        state.scan_errors.append(
-            {
-                "code": code,
-                "scope": scope,
-                "path": path,
-                "message": message,
-                "recoverable": recoverable,
-                "occurred_at_utc": _utc_text(
-                    self._clock().astimezone(timezone.utc)
-                ),
-            }
-        )
+        state.scan_error_counter += 1
+        if len(state.scan_errors) < state.maximum_issue_records:
+            state.scan_errors.append(
+                {
+                    "code": code,
+                    "scope": scope,
+                    "path": path,
+                    "message": message,
+                    "recoverable": recoverable,
+                    "occurred_at_utc": occurred_at
+                    or _utc_text(self._clock().astimezone(timezone.utc)),
+                }
+            )
 
     @staticmethod
     def _scan_status(state: _ScanState) -> str:
         if state.cancelled:
             return "cancelled"
-        if state.scan_errors:
+        if state.scan_error_counter:
             return "partial"
         return "complete"
 
@@ -810,7 +980,8 @@ class StorageScanner:
         total_bytes: int,
         status: str,
     ) -> dict[str, Any]:
-        observed_used = state.user_content_bytes + state.development_storage_bytes
+        observed_categories = dict(state.category_allocated_bytes)
+        observed_used = sum(observed_categories.values())
         if observed_used > used_bytes:
             self._record_scan_error(
                 state,
@@ -823,14 +994,17 @@ class StorageScanner:
                 ),
                 recoverable=True,
             )
-            user_content_bytes = 0
-            development_cache_bytes = 0
-        else:
-            user_content_bytes = state.user_content_bytes
-            development_cache_bytes = state.development_storage_bytes
+            observed_categories = {
+                category: 0 for category in observed_categories
+            }
+            observed_used = 0
 
-        other_bytes = used_bytes - user_content_bytes - development_cache_bytes
-        coverage = "partial" if status != "complete" or state.scan_errors else "estimated"
+        other_bytes = used_bytes - observed_used
+        coverage = (
+            "partial"
+            if status != "complete" or state.scan_error_counter
+            else "estimated"
+        )
         return {
             "coverage": coverage,
             "categories": {
@@ -840,50 +1014,64 @@ class StorageScanner:
                     "explanation": "Free bytes reported by the selected drive.",
                 },
                 "protected_system": {
-                    "bytes": 0,
-                    "measurement": "unavailable",
-                    "explanation": (
-                        "Protected Windows storage is not recursively scanned in "
-                        "this milestone."
-                    ),
-                },
-                "installed_applications": {
-                    "bytes": 0,
-                    "measurement": "unavailable",
-                    "explanation": (
-                        "Installed application directories are protected and are "
-                        "not recursively scanned."
-                    ),
-                },
-                "user_content": {
-                    "bytes": user_content_bytes,
-                    "measurement": (
-                        "estimated" if user_content_bytes else "unavailable"
-                    ),
-                    "explanation": (
-                        "Logical file bytes observed in accessible, user-approved "
-                        "roots outside explicit development-cache roots."
-                    ),
-                },
-                "development_tools_and_caches": {
-                    "bytes": development_cache_bytes,
+                    "bytes": observed_categories["protected_system"],
                     "measurement": (
                         "estimated"
-                        if development_cache_bytes
+                        if observed_categories["protected_system"]
                         else "unavailable"
                     ),
                     "explanation": (
-                        "Logical file bytes observed in supported development "
-                        "locations or explicit development-cache roots inside "
-                        "the selected scan scope."
+                        "Allocated bytes observed in accessible protected Windows, "
+                        "recovery, and Recycle Bin locations."
+                    ),
+                },
+                "installed_applications": {
+                    "bytes": observed_categories["installed_applications"],
+                    "measurement": (
+                        "estimated"
+                        if observed_categories["installed_applications"]
+                        else "unavailable"
+                    ),
+                    "explanation": (
+                        "Allocated bytes observed in accessible Program Files and "
+                        "ProgramData locations; these files are never candidates."
+                    ),
+                },
+                "user_content": {
+                    "bytes": observed_categories["user_content"],
+                    "measurement": (
+                        "estimated"
+                        if observed_categories["user_content"]
+                        else "unavailable"
+                    ),
+                    "explanation": (
+                        "Allocated bytes observed in accessible scan locations "
+                        "outside protected and development-tool categories."
+                    ),
+                },
+                "development_tools_and_caches": {
+                    "bytes": observed_categories[
+                        "development_tools_and_caches"
+                    ],
+                    "measurement": (
+                        "estimated"
+                        if observed_categories[
+                            "development_tools_and_caches"
+                        ]
+                        else "unavailable"
+                    ),
+                    "explanation": (
+                        "Allocated bytes observed in supported development "
+                        "locations and explicit development-cache roots."
                     ),
                 },
                 "other_or_unreadable": {
                     "bytes": other_bytes,
                     "measurement": "estimated",
                     "explanation": (
-                        "Remaining used drive space was not assigned by the "
-                        "selected-root metadata scan."
+                        "Remaining physical drive usage not assigned from "
+                        "accessible allocated-size metadata, including filesystem "
+                        "overhead and inaccessible locations."
                     ),
                 },
             },
@@ -893,20 +1081,40 @@ class StorageScanner:
     def _limitations(
         state: _ScanState,
         development_cache_roots: tuple[Path, ...],
+        *,
+        whole_drive_scan: bool,
     ) -> list[str]:
+        scope_limitation = (
+            "The explicitly selected drive root was scanned across all accessible, "
+            "non-protected folders."
+            if whole_drive_scan
+            else "Only explicitly selected user-approved folders were scanned."
+        )
         limitations = [
-            "Only user-approved roots were scanned; this is not a silent whole-drive scan.",
+            scope_limitation,
             "Only metadata was inspected; file contents and content hashes were not read.",
+            "Drive categories use Windows allocated-size metadata and stable file identities; inaccessible bytes remain unclassified.",
             "Modification time does not prove whether a file is useful or safe to remove.",
             "Likely incomplete describes naming and age evidence, not proven corruption.",
             "Last-access time is informational and was not used as classification evidence.",
-            "Protected paths and reparse points were not followed.",
+            "Protected Windows and application files are measured when accessible but never become cleanup candidates; reparse points are not followed.",
             "File identities were counted once when the operating system exposed a stable identity.",
+            "Application-managed data, installer-style files, databases, and likely save data are review-only.",
         ]
         if state.omitted_candidates:
             limitations.append(
                 f"{state.omitted_candidates} candidate detail record(s) were "
                 "omitted by the configured limit; aggregate totals include them."
+            )
+        if state.omitted_inaccessible_paths:
+            limitations.append(
+                f"{state.omitted_inaccessible_paths} additional inaccessible-path "
+                "record(s) were omitted by the configured safety limit."
+            )
+        if state.omitted_scan_errors:
+            limitations.append(
+                f"{state.omitted_scan_errors} additional scan-error record(s) "
+                "were omitted by the configured safety limit."
             )
         if development_cache_roots:
             limitations.append(

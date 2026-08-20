@@ -117,11 +117,31 @@
           "type": "integer",
           "minimum": 0
         },
+        "allocated_bytes_examined": {
+          "type": "integer",
+          "minimum": 0
+        },
         "candidate_details_retained": {
           "type": "integer",
           "minimum": 0
         },
         "candidate_details_omitted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "inaccessible_path_details_retained": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "inaccessible_path_details_omitted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "scan_error_details_retained": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "scan_error_details_omitted": {
           "type": "integer",
           "minimum": 0
         }
@@ -230,6 +250,11 @@
               "minimum": 1,
               "maximum": 100000
             },
+            "maximum_issue_records": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000
+            },
             "use_last_access_as_classification_evidence": {
               "const": false
             },
@@ -321,6 +346,14 @@
           "type": "integer",
           "minimum": 0
         },
+        "total_unique_candidate_allocated_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "retained_unique_candidate_allocated_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
         "omitted_candidates": {
           "type": "integer",
           "minimum": 0
@@ -375,12 +408,14 @@
     },
     "inaccessible_paths": {
       "type": "array",
+      "maxItems": 10000,
       "items": {
         "$ref": "#/$defs/inaccessiblePath"
       }
     },
     "scan_errors": {
       "type": "array",
+      "maxItems": 10000,
       "items": {
         "$ref": "#/$defs/scanError"
       }
@@ -497,6 +532,10 @@
           "items": {
             "$ref": "#/$defs/developmentError"
           }
+        },
+        "errors_omitted": {
+          "type": "integer",
+          "minimum": 0
         },
         "limitations": {
           "type": "array",
@@ -671,6 +710,10 @@
           "type": "integer",
           "minimum": 0
         },
+        "allocated_bytes_examined": {
+          "type": "integer",
+          "minimum": 0
+        },
         "errors_count": {
           "type": "integer",
           "minimum": 0
@@ -797,6 +840,13 @@
           ],
           "minimum": 0
         },
+        "allocated_size_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
         "created_at_utc": {
           "oneOf": [
             {
@@ -858,6 +908,14 @@
             "low"
           ]
         },
+        "removal_risk": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "protected"
+          ]
+        },
         "protection": {
           "$ref": "#/$defs/protection"
         },
@@ -914,6 +972,7 @@
         "eligibility": {
           "enum": [
             "eligible",
+            "review_only",
             "protected",
             "unavailable"
           ]

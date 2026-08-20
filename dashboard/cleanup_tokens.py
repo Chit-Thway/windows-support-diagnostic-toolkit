@@ -75,7 +75,12 @@ class CleanupPreviewStore:
     ) -> CleanupPreview:
         selected = tuple(copy.deepcopy(tuple(candidates)))
         now = self._now()
-        total_bytes = sum(candidate["size_bytes"] or 0 for candidate in selected)
+        total_bytes = sum(
+            candidate.get("allocated_size_bytes")
+            if candidate.get("allocated_size_bytes") is not None
+            else candidate["size_bytes"] or 0
+            for candidate in selected
+        )
         high_risk = (
             len(selected) >= HIGH_RISK_FILE_COUNT
             or total_bytes >= HIGH_RISK_TOTAL_BYTES

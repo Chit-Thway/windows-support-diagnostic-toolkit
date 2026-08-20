@@ -292,8 +292,41 @@ def test_entry_point_passes_selected_storage_report(monkeypatch) -> None:
     )
 
     assert captured["report_path"].name == "warning-report.json"
-    assert captured["storage_report_path"].name == "partial-storage-report.json"
+    assert len(captured["storage_report_path"]) == 1
+    assert captured["storage_report_path"][0].name == "partial-storage-report.json"
     assert captured["run"]["host"] == "127.0.0.1"
+
+
+def test_entry_point_passes_multiple_storage_reports(monkeypatch) -> None:
+    import dashboard.__main__ as dashboard_main
+
+    captured: dict = {}
+
+    class FakeApp:
+        def run(self, **_kwargs):
+            return None
+
+    def fake_create_app(report_path, storage_report_path):
+        captured["report_path"] = report_path
+        captured["storage_report_path"] = storage_report_path
+        return FakeApp()
+
+    monkeypatch.setattr(dashboard_main, "create_app", fake_create_app)
+    dashboard_main.main(
+        [
+            "--report",
+            "tests/fixtures/warning-report.json",
+            "--storage-report",
+            "tests/storage/fixtures/healthy-storage-report.json",
+            "--storage-report",
+            "tests/storage/fixtures/candidate-attributes-storage-report.json",
+        ]
+    )
+
+    assert [path.name for path in captured["storage_report_path"]] == [
+        "healthy-storage-report.json",
+        "candidate-attributes-storage-report.json",
+    ]
 
 
 @pytest.mark.parametrize("port", ["0", "65536", "not-a-number"])

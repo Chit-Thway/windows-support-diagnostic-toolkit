@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -88,9 +89,20 @@ def _validate_semantics(report: dict[str, Any]) -> None:
         raise StorageReportValidationError(
             "Retained candidate_id values must be unique."
         )
+    candidate_paths = [
+        os.path.normcase(os.path.abspath(candidate["path"]))
+        for candidate in candidates
+    ]
+    if len(candidate_paths) != len(set(candidate_paths)):
+        raise StorageReportValidationError(
+            "Retained candidate paths must be unique."
+        )
 
     retained_bytes = sum(
         candidate["size_bytes"] or 0 for candidate in candidates
+    )
+    retained_allocated_bytes = sum(
+        candidate.get("allocated_size_bytes") or 0 for candidate in candidates
     )
     if summary["retained_candidates"] != len(candidates):
         raise StorageReportValidationError(
@@ -99,6 +111,13 @@ def _validate_semantics(report: dict[str, Any]) -> None:
     if summary["retained_unique_candidate_bytes"] != retained_bytes:
         raise StorageReportValidationError(
             "retained_unique_candidate_bytes does not match retained rows."
+        )
+    if "retained_unique_candidate_allocated_bytes" in summary and (
+        summary["retained_unique_candidate_allocated_bytes"]
+        != retained_allocated_bytes
+    ):
+        raise StorageReportValidationError(
+            "retained_unique_candidate_allocated_bytes does not match retained rows."
         )
     if summary["total_unique_candidates"] != (
         summary["retained_candidates"] + summary["omitted_candidates"]
@@ -110,6 +129,14 @@ def _validate_semantics(report: dict[str, Any]) -> None:
         raise StorageReportValidationError(
             "Total unique candidate bytes cannot be below retained bytes."
         )
+    if (
+        "total_unique_candidate_allocated_bytes" in summary
+        and summary["total_unique_candidate_allocated_bytes"]
+        < retained_allocated_bytes
+    ):
+        raise StorageReportValidationError(
+            "Total allocated candidate bytes cannot be below retained allocated bytes."
+        )
     if scan["candidate_details_retained"] != summary["retained_candidates"]:
         raise StorageReportValidationError(
             "Scan and summary retained-candidate counts do not match."
@@ -118,6 +145,31 @@ def _validate_semantics(report: dict[str, Any]) -> None:
         raise StorageReportValidationError(
             "Scan and summary omitted-candidate counts do not match."
         )
+
+    issue_detail_fields = (
+        (
+            "inaccessible_path_details_retained",
+            "inaccessible_path_details_omitted",
+            report["inaccessible_paths"],
+        ),
+        (
+            "scan_error_details_retained",
+            "scan_error_details_omitted",
+            report["scan_errors"],
+        ),
+    )
+    for retained_name, omitted_name, records in issue_detail_fields:
+        if retained_name in scan or omitted_name in scan:
+            retained = scan.get(retained_name)
+            omitted = scan.get(omitted_name)
+            if retained != len(records) or omitted is None:
+                raise StorageReportValidationError(
+                    "Scan issue-detail counts do not match retained records."
+                )
+            if omitted and scan["status"] == "complete":
+                raise StorageReportValidationError(
+                    "A complete scan cannot omit issue-detail records."
+                )
 
     retained_attribute_counts = {
         attribute: 0 for attribute in summary["attributes"]
@@ -137,6 +189,12 @@ def _validate_semantics(report: dict[str, Any]) -> None:
             )
 
         eligibility = candidate["protection"]["eligibility"]
+        removal_risk = candidate.get(
+            "removal_risk",
+            "protected"
+            if eligibility in {"protected", "unavailable"}
+            else "medium",
+        )
         if eligibility == "eligible":
             if attributes.intersection({"protected", "unavailable"}):
                 raise StorageReportValidationError(
@@ -150,6 +208,19 @@ def _validate_semantics(report: dict[str, Any]) -> None:
                 raise StorageReportValidationError(
                     "Reparse-point candidates cannot be eligible."
                 )
+            if removal_risk in {"high", "protected"}:
+                raise StorageReportValidationError(
+                    "High-risk or protected candidates cannot be cleanup eligible."
+                )
+        elif eligibility == "review_only":
+            if not candidate["is_regular_file"] or candidate["is_reparse_point"]:
+                raise StorageReportValidationError(
+                    "Review-only candidates must be regular non-reparse files."
+                )
+            if removal_risk != "high":
+                raise StorageReportValidationError(
+                    "Review-only candidates must carry high removal risk."
+                )
         elif eligibility == "protected" and "protected" not in attributes:
             raise StorageReportValidationError(
                 "Protected candidates must include the protected attribute."
@@ -157,6 +228,13 @@ def _validate_semantics(report: dict[str, Any]) -> None:
         elif eligibility == "unavailable" and "unavailable" not in attributes:
             raise StorageReportValidationError(
                 "Unavailable candidates must include the unavailable attribute."
+            )
+        if (
+            eligibility in {"protected", "unavailable"}
+            and removal_risk != "protected"
+        ):
+            raise StorageReportValidationError(
+                "Protected and unavailable candidates require protected removal risk."
             )
 
         for attribute in attributes:
@@ -192,6 +270,12 @@ def _validate_semantics(report: dict[str, Any]) -> None:
 
     development = report.get("development_insights")
     if development is not None:
+        if (
+            development["errors"] or development.get("errors_omitted", 0)
+        ) and development["status"] == "complete":
+            raise StorageReportValidationError(
+                "Development discovery with errors cannot be complete."
+            )
         locations = development["locations"]
         location_ids = [location["location_id"] for location in locations]
         if len(location_ids) != len(set(location_ids)):

@@ -7,7 +7,7 @@ from collections.abc import Sequence
 
 from .app import create_app
 from .report_loader import resolve_report_path
-from .storage_report_loader import resolve_storage_report_path
+from .storage_report_loader import resolve_storage_report_paths
 
 LOOPBACK_HOST = "127.0.0.1"
 DEFAULT_PORT = 5000
@@ -43,10 +43,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--storage-report",
+        action="append",
         help=(
-            "Path to a storage-analysis JSON report. Overrides "
-            "STORAGE_REPORT_PATH. When omitted for a custom diagnostic report, "
-            "the drive page shows local scan instructions."
+            "Path to a per-drive storage-analysis JSON report. Repeat for "
+            "additional drives. Overrides STORAGE_REPORT_PATH. When omitted "
+            "for a custom diagnostic report, the drive page shows local scan "
+            "instructions."
         ),
     )
     return parser
@@ -55,13 +57,13 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     report_path = resolve_report_path(args.report)
-    storage_report_path = resolve_storage_report_path(
+    storage_report_paths = resolve_storage_report_paths(
         args.storage_report,
         diagnostic_report_path=report_path,
     )
     app = create_app(
         report_path=report_path,
-        storage_report_path=storage_report_path,
+        storage_report_path=storage_report_paths,
     )
     app.run(
         host=LOOPBACK_HOST,

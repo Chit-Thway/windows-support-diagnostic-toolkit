@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import secrets
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -25,27 +26,30 @@ from .storage_presenter import present_storage_report
 from .storage_report_loader import (
     StorageReportLoadError,
     StorageReportNotFoundError,
-    load_storage_report,
-    resolve_storage_report_path,
+    load_storage_report_for_drive,
+    resolve_storage_report_paths,
 )
 
 
 def create_app(
     report_path: str | Path | None = None,
-    storage_report_path: str | Path | None = None,
+    storage_report_path: str | Path | Sequence[str | Path] | None = None,
     test_config: dict[str, Any] | None = None,
 ) -> Flask:
     resolved_report_path = resolve_report_path(report_path)
-    resolved_storage_report_path = resolve_storage_report_path(
+    resolved_storage_report_paths = resolve_storage_report_paths(
         storage_report_path,
         diagnostic_report_path=resolved_report_path,
     )
     app = Flask(__name__, template_folder="templates", static_folder="static")
     app.config.from_mapping(
         REPORT_PATH=str(resolved_report_path),
+        STORAGE_REPORT_PATHS=tuple(
+            str(path) for path in resolved_storage_report_paths
+        ),
         STORAGE_REPORT_PATH=(
-            str(resolved_storage_report_path)
-            if resolved_storage_report_path is not None
+            str(resolved_storage_report_paths[0])
+            if resolved_storage_report_paths
             else None
         ),
         STORAGE_ACTION_TOKEN=secrets.token_urlsafe(32),
@@ -132,8 +136,8 @@ def create_app(
                 404,
             )
 
-        configured_storage_path = app.config["STORAGE_REPORT_PATH"]
-        if configured_storage_path is None:
+        configured_storage_paths = app.config["STORAGE_REPORT_PATHS"]
+        if not configured_storage_paths:
             return render_template(
                 "storage_report_missing.html",
                 drive=drive,
@@ -141,16 +145,17 @@ def create_app(
                 selected_report_path=selected_report_path,
             )
 
-        selected_storage_report_path = Path(configured_storage_path)
         try:
-            storage_report = load_storage_report(selected_storage_report_path)
+            storage_report, selected_storage_report_path = (
+                load_storage_report_for_drive(configured_storage_paths, drive)
+            )
         except StorageReportNotFoundError:
             return render_template(
                 "storage_report_missing.html",
                 drive=drive,
                 diagnostic_disk=diagnostic_disk,
                 selected_report_path=selected_report_path,
-                selected_storage_report_path=selected_storage_report_path,
+                selected_storage_report_path=Path(configured_storage_paths[0]),
             )
         except StorageReportLoadError as error:
             return (
@@ -158,26 +163,10 @@ def create_app(
                     "storage_report_error.html",
                     error_title=error.title,
                     error_detail=error.detail,
-                    selected_storage_report_path=selected_storage_report_path,
+                    selected_storage_report_path=None,
                     drive=drive,
                 ),
                 error.status_code,
-            )
-
-        storage_drive_letter = storage_report["drive"]["drive_letter"]
-        if storage_drive_letter != drive:
-            return (
-                render_template(
-                    "storage_report_error.html",
-                    error_title="Storage analysis belongs to another drive",
-                    error_detail=(
-                        f"The selected analysis is for {storage_drive_letter}, not "
-                        f"{drive}. Generate or select an analysis for this drive."
-                    ),
-                    selected_storage_report_path=selected_storage_report_path,
-                    drive=drive,
-                ),
-                409,
             )
 
         return render_template(
@@ -200,23 +189,19 @@ def create_app(
                 message="The local action token is missing or no longer valid.",
             ), 403
 
-        configured_storage_path = app.config["STORAGE_REPORT_PATH"]
-        if configured_storage_path is None:
+        configured_storage_paths = app.config["STORAGE_REPORT_PATHS"]
+        if not configured_storage_paths:
             return jsonify(
                 ok=False,
                 message="No storage analysis is selected.",
             ), 404
 
         try:
-            storage_report = load_storage_report(configured_storage_path)
+            storage_report, _selected_storage_report_path = (
+                load_storage_report_for_drive(configured_storage_paths, drive)
+            )
         except StorageReportLoadError as error:
             return jsonify(ok=False, message=error.detail), error.status_code
-
-        if storage_report["drive"]["drive_letter"] != drive:
-            return jsonify(
-                ok=False,
-                message="The selected storage analysis belongs to another drive.",
-            ), 409
 
         candidate_id = request.form.get("candidate_id", "")
         candidate = next(

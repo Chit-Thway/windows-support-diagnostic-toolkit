@@ -75,9 +75,8 @@ def test_development_cache_must_be_inside_scan_root(tmp_path: Path) -> None:
         policy.validate_development_cache_roots([cache], roots)
 
 
-def test_whole_drive_root_is_rejected() -> None:
+def test_explicit_whole_drive_root_is_allowed() -> None:
     drive_root = Path(Path.cwd().drive + "\\")
     policy = ProtectedPathPolicy(protected_roots=())
 
-    with pytest.raises(UnsafeScanRootError, match="entire drive"):
-        policy.validate_roots([drive_root])
+    assert policy.validate_roots([drive_root]) == (drive_root.resolve(),)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -57,6 +57,56 @@ class StorageReportContractError(StorageReportLoadError):
     title = "Storage analysis does not match the expected contract"
 
 
+class StorageReportDriveMismatchError(StorageReportLoadError):
+    title = "Storage analysis belongs to another drive"
+    status_code = 409
+
+
+def resolve_storage_report_paths(
+    command_line_paths: str | Path | Iterable[str | Path] | None = None,
+    environment: Mapping[str, str] | None = None,
+    current_directory: Path | None = None,
+    diagnostic_report_path: str | Path | None = None,
+) -> tuple[Path, ...]:
+    """Resolve every explicitly selected per-drive storage report."""
+
+    environment = os.environ if environment is None else environment
+    current_directory = Path.cwd() if current_directory is None else current_directory
+
+    selected_paths: list[str | Path]
+    if isinstance(command_line_paths, (str, Path)):
+        selected_paths = [command_line_paths]
+    elif command_line_paths is not None:
+        selected_paths = list(command_line_paths)
+    elif environment.get(STORAGE_REPORT_PATH_ENVIRONMENT_VARIABLE):
+        selected_paths = [
+            value
+            for value in environment[STORAGE_REPORT_PATH_ENVIRONMENT_VARIABLE].split(
+                os.pathsep
+            )
+            if value
+        ]
+    elif diagnostic_report_path is None or (
+        Path(diagnostic_report_path).resolve() == DEFAULT_REPORT_PATH.resolve()
+    ):
+        return (DEFAULT_STORAGE_REPORT_PATH.resolve(),)
+    else:
+        return ()
+
+    resolved: list[Path] = []
+    seen: set[str] = set()
+    for selected_path in selected_paths:
+        path = Path(selected_path).expanduser()
+        if not path.is_absolute():
+            path = current_directory / path
+        path = path.resolve()
+        key = os.path.normcase(str(path))
+        if key not in seen:
+            resolved.append(path)
+            seen.add(key)
+    return tuple(resolved)
+
+
 def resolve_storage_report_path(
     command_line_path: str | Path | None = None,
     environment: Mapping[str, str] | None = None,
@@ -70,26 +120,13 @@ def resolve_storage_report_path(
     silently inherits sample storage data.
     """
 
-    environment = os.environ if environment is None else environment
-    current_directory = Path.cwd() if current_directory is None else current_directory
-
-    selected_path: str | Path | None = None
-    if command_line_path:
-        selected_path = command_line_path
-    elif environment.get(STORAGE_REPORT_PATH_ENVIRONMENT_VARIABLE):
-        selected_path = environment[STORAGE_REPORT_PATH_ENVIRONMENT_VARIABLE]
-    elif diagnostic_report_path is None or (
-        Path(diagnostic_report_path).resolve() == DEFAULT_REPORT_PATH.resolve()
-    ):
-        return DEFAULT_STORAGE_REPORT_PATH.resolve()
-
-    if selected_path is None:
-        return None
-
-    path = Path(selected_path).expanduser()
-    if not path.is_absolute():
-        path = current_directory / path
-    return path.resolve()
+    paths = resolve_storage_report_paths(
+        command_line_path,
+        environment=environment,
+        current_directory=current_directory,
+        diagnostic_report_path=diagnostic_report_path,
+    )
+    return paths[0] if paths else None
 
 
 def load_storage_report(report_path: str | Path) -> dict[str, Any]:
@@ -143,3 +180,47 @@ def load_storage_report(report_path: str | Path) -> dict[str, Any]:
         raise StorageReportContractError(str(error)) from error
 
     return report
+
+
+def load_storage_report_for_drive(
+    report_paths: Iterable[str | Path],
+    drive: str,
+) -> tuple[dict[str, Any], Path]:
+    """Select and load the configured report that belongs to ``drive``."""
+
+    paths = tuple(Path(path) for path in report_paths)
+    if not paths:
+        raise StorageReportNotFoundError("No storage analysis is selected.")
+
+    first_error: StorageReportLoadError | None = None
+    available_drives: list[str] = []
+    for path in paths:
+        try:
+            report = load_storage_report(path)
+        except StorageReportLoadError as error:
+            if first_error is None:
+                first_error = error
+            continue
+
+        report_drive = report["drive"]["drive_letter"]
+        if report_drive == drive:
+            return report, path
+        if report_drive not in available_drives:
+            available_drives.append(report_drive)
+
+    if available_drives:
+        if len(available_drives) == 1:
+            raise StorageReportDriveMismatchError(
+                f"The selected analysis is for {available_drives[0]}, not "
+                f"{drive}. Generate or select an analysis for this drive."
+            )
+        available = ", ".join(available_drives)
+        raise StorageReportDriveMismatchError(
+            f"No selected storage analysis is for {drive}. Available selected "
+            f"drive report(s): {available}."
+        )
+    if first_error is not None:
+        raise first_error
+    raise StorageReportNotFoundError(
+        f"No selected storage analysis is available for {drive}."
+    )

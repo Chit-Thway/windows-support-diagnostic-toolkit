@@ -134,7 +134,7 @@ Every root records:
 - the requested and canonical local path;
 - whether subdirectories were included;
 - root status;
-- files, directories, and bytes examined;
+- files, directories, logical bytes, and allocated bytes examined;
 - error count.
 
 The options snapshot makes later classifications reproducible:
@@ -179,6 +179,14 @@ all six category bytes = drive total_bytes
 
 Files with cleanup attributes are not separate chart slices.
 
+Physical category accounting uses Windows allocated-size metadata rather than
+ordinary logical file length. A stable volume/file identity prevents hard links
+from being counted repeatedly. Accessible protected Windows and application
+files contribute to protected chart categories but never to cleanup candidates.
+The remainder between Windows-reported used bytes and observed allocated bytes
+is assigned to `other_or_unreadable`; it can include inaccessible storage and
+filesystem overhead.
+
 ## Development-storage insights
 
 New Milestone 6 reports include the optional `development_insights` object.
@@ -216,12 +224,14 @@ Each retained record contains:
 
 - a report-local `candidate_id`;
 - full local path, scan root, name, and extension;
-- size and selected timestamps, using `null` when unavailable;
+- logical size, optional allocated size, and selected timestamps, using `null`
+  when unavailable;
 - last-access reliability;
 - one non-overlapping storage category;
 - one or more candidate attributes;
 - evidence for every attribute;
 - classification confidence;
+- removal risk: `low`, `medium`, `high`, or `protected`;
 - selection eligibility and protection reason;
 - regular-file and reparse-point state.
 
@@ -243,6 +253,13 @@ not proven corruption. `large` describes potential impact, not disposability.
 Confidence expresses the strength of classification evidence. It never
 expresses the probability that deletion is safe.
 
+Eligibility and removal risk are separate. `review_only` candidates are regular
+files whose metadata may still be useful, but the risk policy prevents Recycle
+Bin selection. Installer/application extensions, application-managed AppData,
+databases, configuration files, and likely save data are high-risk review-only
+records. Cleanup immediately reapplies the current risk policy so an older
+report cannot bypass new protections.
+
 ## Overlapping attributes and unique-byte accounting
 
 Candidate attributes intentionally overlap. A 6 GB file can be stale, large,
@@ -258,6 +275,8 @@ The authoritative values are:
 - `total_unique_candidate_bytes`;
 - `retained_candidates`;
 - `retained_unique_candidate_bytes`;
+- `total_unique_candidate_allocated_bytes` when allocation metadata is present;
+- `retained_unique_candidate_allocated_bytes` when allocation metadata is present;
 - `omitted_candidates`.
 
 The accounting method is fixed to `unique_candidate_id`. Tests reject duplicate
@@ -265,7 +284,9 @@ retained IDs, inflated retained-byte totals, and mismatches between retained
 candidate rows and the summary.
 
 When rows are bounded, aggregate totals include omitted candidates while the
-report clearly states how many details were omitted.
+report clearly states how many details were omitted. Retained rows are selected
+by deterministic review value—eligibility, lower removal risk, stronger
+evidence, confidence, and allocated size—not filesystem traversal order.
 
 ## Partial scans and structured errors
 

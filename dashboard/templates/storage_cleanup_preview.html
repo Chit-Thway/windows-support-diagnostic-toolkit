@@ -52,12 +52,13 @@
                     <li class="panel cleanup-file">
                         <div class="cleanup-file-heading">
                             <div><h3>{{ candidate.name }}</h3><p class="path-value">{{ candidate.path }}</p></div>
-                            <strong>{{ candidate.size }}</strong>
+                            <strong>{{ candidate.allocated_size }} on disk</strong>
                         </div>
                         <div class="attribute-badges" aria-label="Candidate attributes">
                             {% for attribute in candidate.attributes_view %}<span class="attribute-badge">{{ attribute.label }}</span>{% endfor %}
                         </div>
                         <p><strong>Confidence:</strong> {{ candidate.confidence_label }} — classification strength, not proof that recycling is safe.</p>
+                        <p><strong>Removal risk:</strong> {{ candidate.removal_risk_label }}. {{ candidate.protection.explanation }}</p>
                         <ul class="cleanup-evidence">
                             {% for evidence in candidate.evidence %}<li>{{ evidence.description }}</li>{% endfor %}
                         </ul>

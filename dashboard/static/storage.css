@@ -680,7 +680,8 @@
 }
 
 .attribute-badge,
-.confidence {
+.confidence,
+.risk {
     display: inline-flex;
     padding: 0.18rem 0.5rem;
     border-radius: 999px;
@@ -697,6 +698,10 @@
 .confidence-high { color: var(--healthy); background: var(--healthy-soft); }
 .confidence-medium { color: var(--warning); background: var(--warning-soft); }
 .confidence-low { color: var(--unavailable); background: var(--unavailable-soft); }
+.risk-low { color: var(--healthy); background: var(--healthy-soft); }
+.risk-medium { color: var(--warning); background: var(--warning-soft); }
+.risk-high { color: var(--problem); background: var(--problem-soft); }
+.risk-protected { color: var(--unavailable); background: var(--unavailable-soft); }
 
 .row-actions {
     min-width: 170px;

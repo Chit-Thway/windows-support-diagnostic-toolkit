@@ -4,7 +4,7 @@ import copy
 import html
 import json
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from dashboard.app import create_app
@@ -108,17 +108,21 @@ def build_app(
     report_path: Path,
     tmp_path: Path,
     recycled: list[Path],
+    config_overrides: dict | None = None,
 ):
+    test_config = {
+        "TESTING": True,
+        "STORAGE_ACTION_TOKEN": "fixed-action-token",
+        "CLEANUP_PREVIEW_STORE": CleanupPreviewStore(),
+        "CLEANUP_RECORD_DIRECTORY": tmp_path / "cleanup-records",
+        "RECYCLE_HANDLER": lambda path: recycled.append(path),
+    }
+    if config_overrides:
+        test_config.update(config_overrides)
     return create_app(
         report_path=DIAGNOSTIC_REPORT,
         storage_report_path=report_path,
-        test_config={
-            "TESTING": True,
-            "STORAGE_ACTION_TOKEN": "fixed-action-token",
-            "CLEANUP_PREVIEW_STORE": CleanupPreviewStore(),
-            "CLEANUP_RECORD_DIRECTORY": tmp_path / "cleanup-records",
-            "RECYCLE_HANDLER": lambda path: recycled.append(path),
-        },
+        test_config=test_config,
     )
 
 
@@ -321,3 +325,68 @@ def test_high_risk_selection_requires_exact_typed_phrase(tmp_path) -> None:
 
     assert response.status_code == 400
     assert recycled == []
+
+
+def test_expired_preview_never_recycles_a_file(tmp_path) -> None:
+    report, _paths = build_storage_report(tmp_path)
+    report_path = write_storage_report(tmp_path, report)
+    recycled: list[Path] = []
+    now = [datetime(2026, 8, 3, tzinfo=timezone.utc)]
+    store = CleanupPreviewStore(
+        clock=lambda: now[0],
+        lifetime=timedelta(seconds=1),
+    )
+    client = build_app(
+        report_path,
+        tmp_path,
+        recycled,
+        {"CLEANUP_PREVIEW_STORE": store},
+    ).test_client()
+    drive = report["drive"]["drive_letter"]
+    token = preview_token(preview_selection(client, drive, ["cleanup-001"]))
+    now[0] += timedelta(seconds=2)
+
+    response = client.post(
+        f"/storage/{drive}/cleanup/confirm",
+        data={
+            "action_token": "fixed-action-token",
+            "preview_token": token,
+            "confirm_cleanup": "yes",
+        },
+    )
+
+    assert response.status_code == 410
+    assert recycled == []
+    assert b"preview expired" in response.data.lower()
+
+
+def test_cleanup_result_remains_visible_when_local_record_write_fails(
+    tmp_path,
+) -> None:
+    report, paths = build_storage_report(tmp_path)
+    report_path = write_storage_report(tmp_path, report)
+    recycled: list[Path] = []
+    blocked_record_directory = tmp_path / "record-path-is-a-file"
+    blocked_record_directory.write_text("synthetic blocker", encoding="utf-8")
+    client = build_app(
+        report_path,
+        tmp_path,
+        recycled,
+        {"CLEANUP_RECORD_DIRECTORY": blocked_record_directory},
+    ).test_client()
+    drive = report["drive"]["drive_letter"]
+    token = preview_token(preview_selection(client, drive, ["cleanup-001"]))
+
+    response = client.post(
+        f"/storage/{drive}/cleanup/confirm",
+        data={
+            "action_token": "fixed-action-token",
+            "preview_token": token,
+            "confirm_cleanup": "yes",
+        },
+    )
+
+    assert response.status_code == 200
+    assert recycled == paths
+    assert b"Record warning" in response.data
+    assert b"could not be written" in response.data
