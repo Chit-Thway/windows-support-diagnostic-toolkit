@@ -6,6 +6,7 @@ from pathlib import Path
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 SCANNER_FILES = (
     REPOSITORY_ROOT / "storage" / "scanner.py",
+    REPOSITORY_ROOT / "storage" / "file_type_indexer.py",
     REPOSITORY_ROOT / "storage" / "classifier.py",
     REPOSITORY_ROOT / "storage" / "path_policy.py",
     REPOSITORY_ROOT / "storage" / "development.py",
@@ -100,6 +101,18 @@ def test_scanner_does_not_resolve_detected_reparse_targets() -> None:
     )
 
     assert "resolve(strict=False)" not in scanner_source
+
+
+def test_file_type_indexer_avoids_expensive_general_scanner_enrichment() -> None:
+    source = (REPOSITORY_ROOT / "storage" / "file_type_indexer.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "get_allocated_size" not in source
+    assert "get_file_identity" not in source
+    assert "classify_file" not in source
+    assert "metadata_tree_fingerprint" not in source
+    assert "DevelopmentInsightsInspector" not in source
 
 
 def test_generated_storage_reports_remain_ignored() -> None:

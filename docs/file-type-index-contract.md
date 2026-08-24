@@ -11,11 +11,43 @@ is:
 - schema: [`schema/file-type-index.schema.json`](../schema/file-type-index.schema.json);
 - public sample: [`sample_data/sample-file-type-index.json`](../sample_data/sample-file-type-index.json).
 
-This milestone defines and validates the data model only. It does not start a
-drive scan, add the ranked-tree interface, or enable a new cleanup action.
+The contract is produced by the explicitly invoked V2 whole-drive indexer. The
+dashboard does not start it automatically. The ranked-tree interface and new
+cleanup actions remain later milestones.
 
 The index is metadata-only, local, and scoped to one explicitly requested
 Windows drive. A separate index is required for each drive.
+
+## Create a local index
+
+From an activated project virtual environment, explicitly select one drive and
+run:
+
+```powershell
+python -m storage.file_type_indexer `
+  --drive 'C:\' `
+  --output 'c-file-type-index.json'
+```
+
+The validated UTF-8 file is created under the ignored `storage-reports/`
+directory. Existing files are not replaced by default. Repeat the command with
+a different drive and output name to create an independent index for that drive.
+If `--output` is omitted, the stable per-drive cache name is
+`file-type-index-c.json` (or the selected drive letter). A later run must use
+`--refresh` to atomically replace that ignored cache after the new index passes
+validation.
+
+The indexer performs one metadata-only traversal and calculates unfiltered
+logical folder totals plus totals for every preset extension. Changing a future
+dashboard filter will use these stored aggregates and will not rescan the
+drive. Progress reports elapsed time, current path, observed folders and files,
+and indexed matches without inventing a completion percentage. `Ctrl+C`
+requests cancellation and preserves a valid partial index.
+
+Matching file detail is bounded to 100,000 largest logical files by default;
+folder and extension aggregates remain truthful. Change the bound explicitly
+with `--max-file-details`. Optional extensions can be added with repeated
+`--custom-extension` values, but custom types remain review-only.
 
 ## Top-level structure
 

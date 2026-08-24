@@ -32,6 +32,40 @@ candidate attributes, scan completeness, and structured errors.
 The scanner is read-only with respect to selected roots. Creating a requested
 JSON report is its only file-writing operation.
 
+## V2 File-Type Explorer index
+
+The separate V2 indexer performs one explicitly requested, metadata-only pass
+over an actual drive root. It records complete observed folder totals and all
+preset extension totals so the future File-Type Explorer can change filters
+without rescanning.
+
+```powershell
+python -m storage.file_type_indexer `
+  --drive 'C:\' `
+  --output 'c-file-type-index.json'
+```
+
+Repeat the command for another drive:
+
+```powershell
+python -m storage.file_type_indexer `
+  --drive 'F:\' `
+  --output 'f-file-type-index.json'
+```
+
+Generated indexes are validated and written only under ignored
+`storage-reports/`. Without `--output`, each drive uses a stable name such as
+`file-type-index-c.json`; an existing index is not replaced unless the user
+explicitly adds `--refresh`. Refresh uses an atomic replacement only after the
+new index validates. The scan shows elapsed time and observed counters but no
+misleading percentage. Press `Ctrl+C` once to request a valid partial result.
+Zero-byte files are counted without becoming normal file rows, and matching
+detail defaults to the 100,000 largest logical files while exact observed
+folder aggregates remain available.
+
+This milestone creates the local index only. The ranked folder-tree dashboard
+and cleanup integration belong to later V2 milestones.
+
 ## Requirements
 
 - Windows

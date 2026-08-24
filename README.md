@@ -274,10 +274,20 @@ preserving the existing file workflow. See
 [`docs/storage-report-contract.md`](docs/storage-report-contract.md) and
 [`docs/development-storage-insights.md`](docs/development-storage-insights.md).
 
-The V2 File-Type Explorer is being designed around a separate versioned
-per-drive index for ranked folder totals and extension-aware review. Its
-Milestone 1 contract and fictional sample are documented in
+The V2 File-Type Explorer uses a separate versioned per-drive index for ranked
+folder totals and extension-aware review. Its contract, fictional sample, and
+explicit whole-drive indexer are documented in
 [`docs/file-type-index-contract.md`](docs/file-type-index-contract.md).
+
+Create one ignored local index per drive with:
+
+```powershell
+python -m storage.file_type_indexer --drive 'C:\' --output 'c-file-type-index.json'
+python -m storage.file_type_indexer --drive 'F:\' --output 'f-file-type-index.json'
+```
+
+The V2 ranked-tree dashboard is a later milestone; creating an index does not
+change the current storage dashboard or perform cleanup.
 
 Real scans are written only to ignored `storage-reports/`.
 

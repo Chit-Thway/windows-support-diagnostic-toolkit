@@ -129,8 +129,7 @@ Current branch: `storage-extension-m8-folder-analysis`
 
 ### Milestone 9 / V2 Milestone 1 — File-Type Explorer contract and fixtures
 
-Status: Implemented and validated locally on `storage-extension-v2`; not yet
-committed, pushed, or merged.
+Status: Complete on `storage-extension-v2`.
 
 Define the local index/report contract for a complete per-drive folder tree,
 total folder sizes, per-extension totals, preset extension groups, matching
@@ -148,7 +147,8 @@ Current branch: `storage-extension-v2`
 
 ### Milestone 10 / V2 Milestone 2 — Whole-drive extension indexer
 
-Status: Planned; implementation has not started.
+Status: Implemented and validated locally on
+`storage-extension-v2-m2-indexer`; not yet committed, pushed, or merged.
 
 Build one explicitly started scan per selected drive. Enumerate the complete
 approved drive scope once, aggregate every folder's total logical size, and
