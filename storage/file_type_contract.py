@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+import os
 from collections import defaultdict
 from functools import lru_cache
 from pathlib import Path, PureWindowsPath
 from typing import Any
+from uuid import uuid4
 
 from jsonschema import Draft202012Validator, FormatChecker
 from jsonschema.exceptions import SchemaError
@@ -32,6 +34,10 @@ PRESET_EXTENSION_GROUPS = {
 
 class FileTypeIndexValidationError(ValueError):
     """Raised when a File-Type Explorer index violates its contract."""
+
+
+class FileTypeIndexWriteError(OSError):
+    """Raised when a validated local index cannot be created safely."""
 
 
 @lru_cache(maxsize=4)
@@ -552,3 +558,49 @@ def validate_file_type_index(
             f"Validation failed at {_validation_location(first)}: {first.message}"
         )
     _validate_semantics(index)
+
+
+def write_file_type_index(
+    index: dict[str, Any],
+    output_path: str | Path,
+    *,
+    replace_existing: bool = False,
+) -> Path:
+    """Validate and safely create or explicitly refresh a UTF-8 index."""
+
+    validate_file_type_index(index)
+    output = Path(output_path)
+    payload = (json.dumps(index, indent=2, ensure_ascii=False) + "\n").encode(
+        "utf-8"
+    )
+
+    temporary_output: Path | None = None
+    try:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        if replace_existing:
+            temporary_output = output.with_name(
+                f".{output.name}.{uuid4().hex}.tmp"
+            )
+            with temporary_output.open("xb") as index_file:
+                index_file.write(payload)
+            os.replace(temporary_output, output)
+            temporary_output = None
+        else:
+            with output.open("xb") as index_file:
+                index_file.write(payload)
+    except FileExistsError as error:
+        raise FileTypeIndexWriteError(
+            f"A file-type index already exists at '{output}'. "
+            "Choose a new filename."
+        ) from error
+    except OSError as error:
+        raise FileTypeIndexWriteError(
+            f"The file-type index could not be written to '{output}'."
+        ) from error
+    finally:
+        if temporary_output is not None:
+            try:
+                temporary_output.unlink(missing_ok=True)
+            except OSError:
+                pass
+    return output.resolve()
