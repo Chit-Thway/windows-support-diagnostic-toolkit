@@ -126,6 +126,18 @@ python -m dashboard `
   --storage-report '.\storage-reports\f-drive-report.json'
 ```
 
+To enable **Method 1 — File-Type Explorer**, also load the validated V2 index
+for each drive. Repeat `--file-type-index` in the same way:
+
+```powershell
+python -m dashboard `
+  --report '.\reports\first-report.json' `
+  --storage-report '.\storage-reports\c-drive-report.json' `
+  --storage-report '.\storage-reports\f-drive-report.json' `
+  --file-type-index '.\storage-reports\c-file-type-index.json' `
+  --file-type-index '.\storage-reports\f-file-type-index.json'
+```
+
 Each disk card is an accessible link to its per-drive storage page. The page
 shows a non-overlapping capacity chart, scan completeness, inaccessible paths,
 candidate totals, and a read-only candidate explorer. A **Files / Folders**
@@ -163,6 +175,13 @@ Storage analysis selection follows the same pattern. `--storage-report` takes
 priority over `STORAGE_REPORT_PATH`. The fictional default diagnostic sample
 uses `sample_data/sample-storage-report.json`; custom diagnostic reports do not
 silently inherit that sample.
+
+File-Type Explorer selection uses `--file-type-index` before
+`FILE_TYPE_INDEX_PATH`. Repeat the command-line option for multiple drives. On
+Windows, multiple environment-selected paths are separated with a semicolon.
+The fictional default diagnostic sample uses
+`sample_data/sample-file-type-index.json`; custom diagnostic reports never
+silently inherit it.
 
 ## Generate a local diagnostic report
 
@@ -286,8 +305,13 @@ python -m storage.file_type_indexer --drive 'C:\' --output 'c-file-type-index.js
 python -m storage.file_type_indexer --drive 'F:\' --output 'f-file-type-index.json'
 ```
 
-The V2 ranked-tree dashboard is a later milestone; creating an index does not
-change the current storage dashboard or perform cleanup.
+The V2 dashboard now exposes **Cleanup methods** on each loaded per-drive
+storage page. Method 1 opens a read-only File-Type Explorer where grouped and
+individual extension filters recalculate the existing folder aggregates,
+without another drive scan. The ranked tree loads one child level at a time,
+supports accessible expansion and breadcrumbs, and accepts multiple folder
+review scopes while rejecting overlapping parent/child scopes. It does not yet
+display or select the matching files, and it performs no cleanup.
 
 Real scans are written only to ignored `storage-reports/`.
 
@@ -317,6 +341,17 @@ python -m dashboard `
   --report '.\reports\first-report.json' `
   --storage-report '.\storage-reports\c-drive-report.json' `
   --storage-report '.\storage-reports\f-drive-report.json'
+```
+
+Add the independently generated V2 indexes to activate File-Type Explorer:
+
+```powershell
+python -m dashboard `
+  --report '.\reports\first-report.json' `
+  --storage-report '.\storage-reports\c-drive-report.json' `
+  --storage-report '.\storage-reports\f-drive-report.json' `
+  --file-type-index '.\storage-reports\c-file-type-index.json' `
+  --file-type-index '.\storage-reports\f-file-type-index.json'
 ```
 
 Each new per-drive storage report contains both file and folder candidates. A

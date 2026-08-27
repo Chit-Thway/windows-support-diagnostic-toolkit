@@ -257,7 +257,7 @@ def test_entry_point_binds_only_to_loopback(monkeypatch) -> None:
     monkeypatch.setattr(
         dashboard_main,
         "create_app",
-        lambda report_path, storage_report_path: FakeApp(),
+        lambda report_path, storage_report_path, file_type_index_path: FakeApp(),
     )
     dashboard_main.main(["--port", "5051"])
 
@@ -276,9 +276,12 @@ def test_entry_point_passes_selected_storage_report(monkeypatch) -> None:
         def run(self, **kwargs):
             captured["run"] = kwargs
 
-    def fake_create_app(report_path, storage_report_path):
+    def fake_create_app(
+        report_path, storage_report_path, file_type_index_path
+    ):
         captured["report_path"] = report_path
         captured["storage_report_path"] = storage_report_path
+        captured["file_type_index_path"] = file_type_index_path
         return FakeApp()
 
     monkeypatch.setattr(dashboard_main, "create_app", fake_create_app)
@@ -294,6 +297,7 @@ def test_entry_point_passes_selected_storage_report(monkeypatch) -> None:
     assert captured["report_path"].name == "warning-report.json"
     assert len(captured["storage_report_path"]) == 1
     assert captured["storage_report_path"][0].name == "partial-storage-report.json"
+    assert captured["file_type_index_path"] == ()
     assert captured["run"]["host"] == "127.0.0.1"
 
 
@@ -306,9 +310,12 @@ def test_entry_point_passes_multiple_storage_reports(monkeypatch) -> None:
         def run(self, **_kwargs):
             return None
 
-    def fake_create_app(report_path, storage_report_path):
+    def fake_create_app(
+        report_path, storage_report_path, file_type_index_path
+    ):
         captured["report_path"] = report_path
         captured["storage_report_path"] = storage_report_path
+        captured["file_type_index_path"] = file_type_index_path
         return FakeApp()
 
     monkeypatch.setattr(dashboard_main, "create_app", fake_create_app)
@@ -326,6 +333,41 @@ def test_entry_point_passes_multiple_storage_reports(monkeypatch) -> None:
     assert [path.name for path in captured["storage_report_path"]] == [
         "healthy-storage-report.json",
         "candidate-attributes-storage-report.json",
+    ]
+
+
+def test_entry_point_passes_multiple_file_type_indexes(monkeypatch) -> None:
+    import dashboard.__main__ as dashboard_main
+
+    captured: dict = {}
+
+    class FakeApp:
+        def run(self, **_kwargs):
+            return None
+
+    def fake_create_app(
+        report_path, storage_report_path, file_type_index_path
+    ):
+        captured["report_path"] = report_path
+        captured["storage_report_path"] = storage_report_path
+        captured["file_type_index_path"] = file_type_index_path
+        return FakeApp()
+
+    monkeypatch.setattr(dashboard_main, "create_app", fake_create_app)
+    dashboard_main.main(
+        [
+            "--report",
+            "tests/fixtures/warning-report.json",
+            "--file-type-index",
+            "tests/storage/fixtures/complete-file-type-index.json",
+            "--file-type-index",
+            "tests/storage/fixtures/partial-file-type-index.json",
+        ]
+    )
+
+    assert [path.name for path in captured["file_type_index_path"]] == [
+        "complete-file-type-index.json",
+        "partial-file-type-index.json",
     ]
 
 

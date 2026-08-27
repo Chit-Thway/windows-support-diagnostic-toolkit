@@ -36,8 +36,8 @@ JSON report is its only file-writing operation.
 
 The separate V2 indexer performs one explicitly requested, metadata-only pass
 over an actual drive root. It records complete observed folder totals and all
-preset extension totals so the future File-Type Explorer can change filters
-without rescanning.
+preset extension totals so File-Type Explorer can change filters without
+rescanning.
 
 ```powershell
 python -m storage.file_type_indexer `
@@ -63,8 +63,20 @@ Zero-byte files are counted without becoming normal file rows, and matching
 detail defaults to the 100,000 largest logical files while exact observed
 folder aggregates remain available.
 
-This milestone creates the local index only. The ranked folder-tree dashboard
-and cleanup integration belong to later V2 milestones.
+Load one or more generated indexes when starting the dashboard:
+
+```powershell
+python -m dashboard `
+  --report '.\reports\first-report.json' `
+  --storage-report '.\storage-reports\c-drive-report.json' `
+  --file-type-index '.\storage-reports\c-file-type-index.json'
+```
+
+Repeat `--file-type-index` for additional drives. Open the matching disk card,
+then choose **Cleanup methods → File-Type Explorer**. Group or exact-extension
+filters update stored folder aggregates without another scan. The tree is
+read-only in this milestone: it selects non-overlapping folder review scopes
+but does not yet list matching files or enable Recycle Bin actions.
 
 ## Requirements
 

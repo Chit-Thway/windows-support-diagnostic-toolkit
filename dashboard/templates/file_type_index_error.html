@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ error_title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='storage.css') }}">
+</head>
+<body class="error-page">
+    <main class="error-card">
+        <p class="eyebrow">{{ drive }} · File-Type Explorer</p>
+        <h1>{{ error_title }}</h1>
+        <p>{{ error_detail }}</p>
+        {% if selected_file_type_index_path %}<p>Selected local index: <code>{{ selected_file_type_index_path }}</code></p>{% endif %}
+        <p>The dashboard did not start a scan or change any files.</p>
+        <a href="{{ url_for('storage_drive', drive=drive) }}">← Return to {{ drive }} storage insights</a>
+    </main>
+</body>
+</html>

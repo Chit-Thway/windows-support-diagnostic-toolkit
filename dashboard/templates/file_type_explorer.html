@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ explorer.drive.drive_letter }} File-Type Explorer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='storage.css') }}">
+    <script src="{{ url_for('static', filename='dashboard.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='file_type_explorer.js') }}" defer></script>
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to File-Type Explorer</a>
+    <header class="site-header storage-header">
+        <div class="shell header-layout">
+            <div>
+                <p class="eyebrow">Cleanup Method 1 · local read-only review</p>
+                <h1>File-Type Explorer</h1>
+                <p class="header-copy">Choose file types, rank {{ explorer.drive.drive_letter }} folders by matching size, and define non-overlapping review scopes. Nothing on this page deletes, moves, opens, or modifies a file.</p>
+            </div>
+            <dl class="report-meta">
+                <div><dt>Index created</dt><dd><time class="js-local-time" datetime="{{ explorer.generated_at_utc }}">{{ explorer.generated_at_utc }}</time></dd></div>
+                <div><dt>Coverage</dt><dd>{{ explorer.scan.coverage_label }}</dd></div>
+                <div><dt>Local index</dt><dd>{{ explorer.index_filename }}</dd></div>
+            </dl>
+        </div>
+    </header>
+
+    <main id="main-content"
+          class="shell file-type-page"
+          data-file-type-explorer
+          data-drive="{{ explorer.drive.drive_letter }}"
+          data-children-url="{{ url_for('file_type_folder_children', drive=explorer.drive.drive_letter) }}">
+        <nav class="back-nav" aria-label="Storage navigation">
+            <a href="{{ url_for('storage_drive', drive=explorer.drive.drive_letter) }}">← Back to {{ explorer.drive.drive_letter }} storage insights</a>
+        </nav>
+
+        <section class="file-type-overview" aria-labelledby="index-overview-heading">
+            <article class="panel file-type-summary-card status-panel status-{{ explorer.scan.status_class }}">
+                <div class="card-heading">
+                    <div>
+                        <p class="eyebrow">Index completeness</p>
+                        <h2 id="index-overview-heading">{{ explorer.scan.status_label }}</h2>
+                    </div>
+                    <span class="status-badge status-{{ explorer.scan.status_class }}">{{ explorer.scan.coverage_label }}</span>
+                </div>
+                <dl class="scan-values">
+                    <div><dt>Duration</dt><dd>{{ explorer.scan.duration_seconds }} seconds</dd></div>
+                    <div><dt>Folders</dt><dd>{{ explorer.scan.directories_display }}</dd></div>
+                    <div><dt>Files</dt><dd>{{ explorer.scan.files_display }}</dd></div>
+                    <div><dt>Indexed matches</dt><dd>{{ explorer.scan.matching_files_display }}</dd></div>
+                    <div><dt>Matching size</dt><dd>{{ explorer.scan.matching_size }}</dd></div>
+                    <div><dt>Collection issues</dt><dd>{{ explorer.scan.issue_count }}</dd></div>
+                </dl>
+                {% if explorer.scan.status != "complete" %}
+                    <p class="support-note"><strong>Partial index:</strong> accessible observations remain useful, but unavailable paths are not included in exact folder totals.</p>
+                {% endif %}
+            </article>
+            <article class="panel file-type-method-card">
+                <p class="eyebrow">How this method works</p>
+                <h2>Filter first, then choose folders</h2>
+                <ol class="instruction-list">
+                    <li>Choose one or more file-type groups.</li>
+                    <li>Optionally adjust individual extensions with the settings button.</li>
+                    <li>Expand the ranked folder tree and choose non-overlapping review scopes.</li>
+                </ol>
+                <p class="support-note">The tree uses this existing index. Changing a filter never starts another drive scan.</p>
+            </article>
+        </section>
+
+        <section aria-labelledby="file-types-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Step 1</p>
+                    <h2 id="file-types-heading">What do you want to review?</h2>
+                </div>
+                <button type="button" class="secondary-button" data-clear-type-filters>Show total folder sizes</button>
+            </div>
+            <div class="extension-group-grid" data-extension-groups>
+                {% for group in explorer.extension_groups %}
+                    <fieldset class="panel extension-group" data-extension-group="{{ group.group_id }}">
+                        <legend class="visually-hidden">{{ group.label }}</legend>
+                        <div class="extension-group-heading">
+                            <label class="extension-group-toggle">
+                                <input type="checkbox" data-group-toggle value="{{ group.group_id }}">
+                                <span>{{ group.label }}</span>
+                            </label>
+                            <button type="button"
+                                    class="extension-settings-button"
+                                    data-extension-settings-button
+                                    aria-expanded="false"
+                                    aria-controls="extension-settings-{{ group.group_id }}">
+                                <span aria-hidden="true">⚙</span>
+                                <span class="visually-hidden">Configure {{ group.label }} extensions</span>
+                            </button>
+                        </div>
+                        <p class="extension-summary">{{ group.extensions | join(', ') }}</p>
+                        <div id="extension-settings-{{ group.group_id }}"
+                             class="extension-settings"
+                             data-extension-settings
+                             hidden>
+                            {% for extension in group.extensions %}
+                                <label><input type="checkbox" data-extension-toggle value="{{ extension }}" checked> {{ extension }}</label>
+                            {% endfor %}
+                        </div>
+                    </fieldset>
+                {% endfor %}
+            </div>
+            {% if explorer.custom_extension_count == 0 %}
+                <p class="panel safety-note"><strong>Need another extension?</strong> Add it explicitly when creating a fresh index with <code>--custom-extension</code>. The dashboard cannot invent totals for types that were not indexed.</p>
+            {% endif %}
+        </section>
+
+        <section aria-labelledby="folder-tree-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Step 2</p>
+                    <h2 id="folder-tree-heading">Ranked folder tree</h2>
+                </div>
+                <div class="tree-value-heading">
+                    <span data-size-heading>All files total</span>
+                    <strong data-active-filter>Showing total logical folder size</strong>
+                </div>
+            </div>
+
+            <div class="file-type-workspace">
+                <div class="panel folder-tree-panel">
+                    <nav class="folder-breadcrumbs" aria-label="Active folder path" data-folder-breadcrumbs>
+                        <span>{{ explorer.drive.drive_letter }}\</span>
+                    </nav>
+                    <p class="tree-instructions" id="tree-instructions">Use the arrow button or double-click a folder name to expand it. Use its checkbox or single-click its name to add a review scope.</p>
+                    <div class="tree-status" data-tree-status role="status" aria-live="polite"></div>
+                    <ul class="folder-tree"
+                        role="tree"
+                        aria-describedby="tree-instructions"
+                        data-folder-tree>
+                        <li role="treeitem"
+                            aria-level="1"
+                            aria-expanded="false"
+                            data-tree-node
+                            data-folder-id="{{ explorer.root.folder_id }}"
+                            data-parent-id=""
+                            data-folder-path="{{ explorer.root.path }}"
+                            data-folder-name="{{ explorer.root.name }}"
+                            data-total-bytes="{{ explorer.root.total_bytes }}"
+                            data-extension-bytes='{{ explorer.root.extension_bytes | tojson }}'
+                            data-access-state="{{ explorer.root.access_state }}"
+                            data-access-label="{{ explorer.root.access_label }}"
+                            data-access-explanation="{{ explorer.root.access_explanation }}"
+                            data-scope-selectable="{{ 'true' if explorer.root.scope_selectable else 'false' }}"
+                            data-has-children="{{ 'true' if explorer.root.has_children else 'false' }}">
+                            <div class="folder-tree-row">
+                                <button type="button" class="tree-expand-button" data-tree-expand aria-label="Expand {{ explorer.root.name }}">▸</button>
+                                <input type="checkbox" data-folder-scope aria-label="Select {{ explorer.root.path }} as a review scope" {% if not explorer.root.scope_selectable %}disabled{% endif %}>
+                                <button type="button" class="folder-name-button" data-folder-name-button>{{ explorer.root.name }}</button>
+                                <span class="status-badge status-{{ explorer.root.access_class }} folder-access">{{ explorer.root.access_label }}</span>
+                                <strong class="folder-tree-size" data-folder-size>{{ explorer.root.total_size }}</strong>
+                            </div>
+                            <ul role="group" data-tree-children hidden></ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <aside class="panel selected-scope-panel" aria-labelledby="selected-scopes-heading">
+                    <div class="card-heading">
+                        <div>
+                            <p class="eyebrow">Selected bracket</p>
+                            <h3 id="selected-scopes-heading">Review scopes</h3>
+                        </div>
+                        <span class="scope-count" data-selected-scope-count>0</span>
+                    </div>
+                    <p class="support-note">Sibling folders are allowed. A parent and child cannot be selected together because their results overlap.</p>
+                    <div class="scope-feedback" data-scope-feedback role="status" aria-live="polite"></div>
+                    <ul class="selected-scope-list" data-selected-scope-list>
+                        <li class="empty-scope-message" data-empty-scope-message>No folders selected yet.</li>
+                    </ul>
+                </aside>
+            </div>
+        </section>
+
+        <section class="panel milestone-note" aria-label="Milestone boundary">
+            <strong>Read-only folder scope selection is ready.</strong>
+            Matching-file results, sorting, file checkboxes, and Recycle Bin integration belong to later milestones and are not active on this page.
+        </section>
+    </main>
+</body>
+</html>

@@ -118,6 +118,27 @@
             </div>
         </section>
 
+        <section aria-labelledby="cleanup-methods-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Guided local review</p>
+                    <h2 id="cleanup-methods-heading">Cleanup methods</h2>
+                </div>
+            </div>
+            <div class="cleanup-method-grid">
+                <article class="panel cleanup-method-card">
+                    <div class="cleanup-method-number" aria-hidden="true">01</div>
+                    <div>
+                        <p class="eyebrow">Method 1</p>
+                        <h3>File-Type Explorer</h3>
+                        <p>Choose document, video, audio, image, archive, installer, or explicitly indexed custom extensions. Rank folders by matching size, expand the drive hierarchy, and select non-overlapping folders for a later file review.</p>
+                        <p class="support-note">Extension and age help you navigate. They never prove that a file is unnecessary or safe to remove.</p>
+                    </div>
+                    <a class="primary-button method-link" href="{{ url_for('file_type_explorer', drive=storage.drive.drive_letter) }}">Open File-Type Explorer</a>
+                </article>
+            </div>
+        </section>
+
         <section aria-labelledby="development-heading">
             <div class="section-heading">
                 <div>
