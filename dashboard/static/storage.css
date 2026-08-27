@@ -771,6 +771,366 @@
     top: 0;
 }
 
+.cleanup-method-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.cleanup-method-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 1.25rem;
+    align-items: center;
+    padding: 1.4rem;
+    border-left: 5px solid var(--accent);
+}
+
+.cleanup-method-card h3 {
+    margin-bottom: 0.45rem;
+    font-size: 1.45rem;
+}
+
+.cleanup-method-number {
+    display: grid;
+    width: 3.25rem;
+    height: 3.25rem;
+    place-items: center;
+    color: var(--accent-deep);
+    border-radius: 50%;
+    background: #eaf2ff;
+    font-weight: 850;
+}
+
+.method-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.file-type-page {
+    display: grid;
+    gap: 2.3rem;
+    padding: 2rem 0 4rem;
+}
+
+.file-type-overview {
+    display: grid;
+    grid-template-columns: 1.25fr 0.75fr;
+    gap: 1rem;
+}
+
+.file-type-summary-card,
+.file-type-method-card {
+    padding: 1.3rem;
+}
+
+.file-type-method-card h2 {
+    margin-bottom: 0.8rem;
+}
+
+.extension-group-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.extension-group {
+    min-width: 0;
+    margin: 0;
+    padding: 1rem;
+    border: 1px solid var(--line);
+    transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.extension-group.is-active {
+    border-color: var(--accent);
+    box-shadow: 0 8px 22px rgba(19, 70, 130, 0.12);
+    transform: translateY(-2px);
+}
+
+.extension-group.is-partial {
+    border-style: dashed;
+}
+
+.extension-group-heading,
+.extension-group-toggle,
+.tree-value-heading {
+    display: flex;
+    gap: 0.65rem;
+    align-items: center;
+}
+
+.extension-group-heading {
+    justify-content: space-between;
+}
+
+.extension-group-toggle {
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.extension-group-toggle input,
+[data-folder-scope] {
+    width: 1.05rem;
+    height: 1.05rem;
+    accent-color: var(--accent-deep);
+}
+
+.extension-settings-button {
+    display: grid;
+    width: 2.25rem;
+    height: 2.25rem;
+    place-items: center;
+    color: var(--accent-deep);
+    border: 1px solid #b7c7db;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.extension-settings-button:hover,
+.extension-settings-button:focus-visible {
+    color: #fff;
+    background: var(--accent-deep);
+}
+
+.extension-settings-button:focus-visible,
+.folder-name-button:focus-visible,
+.tree-expand-button:focus-visible,
+[data-folder-scope]:focus-visible {
+    outline: 3px solid #ffbf47;
+    outline-offset: 2px;
+}
+
+.extension-summary {
+    min-height: 2.5rem;
+    margin: 0.65rem 0 0;
+    color: var(--muted);
+    font-family: Consolas, monospace;
+    font-size: 0.78rem;
+    overflow-wrap: anywhere;
+}
+
+.extension-settings {
+    display: flex;
+    gap: 0.45rem 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 0.8rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--line);
+}
+
+.extension-settings[hidden] {
+    display: none;
+}
+
+.extension-settings label {
+    display: inline-flex;
+    gap: 0.35rem;
+    align-items: center;
+    padding: 0.25rem 0.45rem;
+    border-radius: 999px;
+    background: #f1f5fa;
+    font-family: Consolas, monospace;
+    font-size: 0.8rem;
+}
+
+.tree-value-heading {
+    align-items: flex-end;
+    flex-direction: column;
+    text-align: right;
+}
+
+.tree-value-heading span {
+    color: var(--muted);
+    font-size: 0.76rem;
+    font-weight: 750;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.file-type-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.36fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.folder-tree-panel,
+.selected-scope-panel {
+    padding: 1.1rem;
+}
+
+.selected-scope-panel {
+    position: sticky;
+    top: 1rem;
+}
+
+.folder-breadcrumbs {
+    display: flex;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #f7f9fc;
+    font-family: Consolas, monospace;
+    font-size: 0.84rem;
+    overflow-wrap: anywhere;
+}
+
+.tree-instructions,
+.tree-status,
+.scope-feedback {
+    color: var(--muted);
+    font-size: 0.84rem;
+}
+
+.tree-status,
+.scope-feedback {
+    min-height: 1.35rem;
+}
+
+.tree-status.is-error,
+.scope-feedback.is-error {
+    color: var(--problem);
+    font-weight: 700;
+}
+
+.folder-tree,
+.folder-tree ul,
+.selected-scope-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.folder-tree ul {
+    margin-left: 1.05rem;
+    padding-left: 0.65rem;
+    border-left: 1px solid #cbd5e1;
+}
+
+.folder-tree-row {
+    display: grid;
+    grid-template-columns: 2rem 1.35rem minmax(150px, 1fr) auto minmax(90px, auto);
+    gap: 0.45rem;
+    align-items: center;
+    min-height: 2.65rem;
+    padding: 0.3rem 0.45rem;
+    border-bottom: 1px solid #edf0f4;
+    border-radius: 6px;
+}
+
+.folder-tree-row:hover {
+    background: #f4f8fd;
+}
+
+.tree-expand-button,
+.folder-name-button {
+    color: var(--ink);
+    border: 0;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+}
+
+.tree-expand-button {
+    width: 1.8rem;
+    height: 1.8rem;
+    color: var(--accent-deep);
+    font-weight: 900;
+}
+
+.tree-expand-button:disabled {
+    cursor: default;
+}
+
+.folder-name-button {
+    min-width: 0;
+    padding: 0.35rem 0.25rem;
+    overflow: hidden;
+    font-weight: 750;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.folder-access {
+    justify-self: end;
+}
+
+.folder-tree-size {
+    min-width: 88px;
+    justify-self: end;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.scope-count {
+    display: grid;
+    min-width: 2rem;
+    height: 2rem;
+    place-items: center;
+    color: #fff;
+    border-radius: 999px;
+    background: var(--accent-deep);
+    font-weight: 800;
+}
+
+.selected-scope-list {
+    display: grid;
+    gap: 0.65rem;
+    margin-top: 0.8rem;
+}
+
+.selected-scope-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 0.65rem;
+    align-items: center;
+    padding: 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: #f8fafc;
+}
+
+.selected-scope-item > div {
+    display: grid;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.selected-scope-item .secondary-text {
+    overflow-wrap: anywhere;
+}
+
+.scope-access {
+    width: fit-content;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.scope-access-review_only { color: var(--warning); }
+.scope-access-protected,
+.scope-access-unavailable { color: var(--unavailable); }
+
+.selected-scope-size {
+    white-space: nowrap;
+}
+
+.empty-scope-message {
+    padding: 1rem;
+    color: var(--muted);
+    border: 1px dashed #b8c3d1;
+    border-radius: 9px;
+    text-align: center;
+}
+
 @media (max-width: 850px) {
     .storage-overview,
     .storage-chart-layout,
@@ -804,6 +1164,19 @@
     .cleanup-result-counts {
         grid-template-columns: 1fr;
     }
+
+    .file-type-overview,
+    .file-type-workspace {
+        grid-template-columns: 1fr;
+    }
+
+    .extension-group-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .selected-scope-panel {
+        position: static;
+    }
 }
 
 @media (max-width: 580px) {
@@ -829,5 +1202,41 @@
     .category-heading {
         flex-direction: column;
         gap: 0.2rem;
+    }
+
+    .cleanup-method-card,
+    .extension-group-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .cleanup-method-number {
+        display: none;
+    }
+
+    .method-link {
+        width: 100%;
+    }
+
+    .tree-value-heading {
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    .folder-tree-row {
+        grid-template-columns: 1.8rem 1.2rem minmax(110px, 1fr) auto;
+    }
+
+    .folder-access {
+        display: none;
+    }
+
+    .folder-tree-size {
+        grid-column: 3 / -1;
+        justify-self: start;
+        padding-left: 0.25rem;
+    }
+
+    .selected-scope-item {
+        grid-template-columns: 1fr auto;
     }
 }

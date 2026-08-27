@@ -6,6 +6,7 @@ import argparse
 from collections.abc import Sequence
 
 from .app import create_app
+from .file_type_index_loader import resolve_file_type_index_paths
 from .report_loader import resolve_report_path
 from .storage_report_loader import resolve_storage_report_paths
 
@@ -51,6 +52,14 @@ def build_parser() -> argparse.ArgumentParser:
             "instructions."
         ),
     )
+    parser.add_argument(
+        "--file-type-index",
+        action="append",
+        help=(
+            "Path to a per-drive File-Type Explorer JSON index. Repeat for "
+            "additional drives. Overrides FILE_TYPE_INDEX_PATH."
+        ),
+    )
     return parser
 
 
@@ -61,9 +70,14 @@ def main(argv: Sequence[str] | None = None) -> None:
         args.storage_report,
         diagnostic_report_path=report_path,
     )
+    file_type_index_paths = resolve_file_type_index_paths(
+        args.file_type_index,
+        diagnostic_report_path=report_path,
+    )
     app = create_app(
         report_path=report_path,
         storage_report_path=storage_report_paths,
+        file_type_index_path=file_type_index_paths,
     )
     app.run(
         host=LOOPBACK_HOST,

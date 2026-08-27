@@ -147,8 +147,7 @@ Current branch: `storage-extension-v2`
 
 ### Milestone 10 / V2 Milestone 2 — Whole-drive extension indexer
 
-Status: Implemented and validated locally on
-`storage-extension-v2-m2-indexer`; not yet committed, pushed, or merged.
+Status: Complete and merged into `storage-extension-v2`.
 
 Build one explicitly started scan per selected drive. Enumerate the complete
 approved drive scope once, aggregate every folder's total logical size, and
@@ -161,11 +160,13 @@ and risk enrichment for unrelated files. Detect zero-byte files from basic
 metadata, count them, and do not retain individual rows. Changing between
 indexed preset groups after the scan must not start another drive scan.
 
-Planned branch: `storage-extension-v2-m2-indexer`
+Completed branch: `storage-extension-v2-m2-indexer`
 
 ### Milestone 11 / V2 Milestone 3 — Cleanup method and ranked folder tree
 
-Status: Planned; implementation has not started.
+Status: Implemented and validated locally on
+`storage-extension-v2-m3-ranked-folder-tree`; not yet committed, pushed, or
+merged.
 
 Add a **Cleanup methods** section to each disk page and a dedicated
 **Method 1 — File-Type Explorer** page. Provide grouped extension checkboxes

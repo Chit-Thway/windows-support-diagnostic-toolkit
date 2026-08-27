@@ -15,6 +15,16 @@ from storage.cleanup import (
 
 from .cleanup_tokens import CleanupPreviewStore
 from .evaluator import evaluate_report
+from .file_type_index_loader import (
+    FileTypeIndexLoadError,
+    FileTypeIndexNotFoundError,
+    load_file_type_index_for_drive,
+    resolve_file_type_index_paths,
+)
+from .file_type_presenter import (
+    present_file_type_children,
+    present_file_type_index,
+)
 from .report_loader import ReportLoadError, load_report, resolve_report_path
 from .storage_cleanup import register_storage_cleanup_routes
 from .storage_actions import (
@@ -34,11 +44,16 @@ from .storage_report_loader import (
 def create_app(
     report_path: str | Path | None = None,
     storage_report_path: str | Path | Sequence[str | Path] | None = None,
+    file_type_index_path: str | Path | Sequence[str | Path] | None = None,
     test_config: dict[str, Any] | None = None,
 ) -> Flask:
     resolved_report_path = resolve_report_path(report_path)
     resolved_storage_report_paths = resolve_storage_report_paths(
         storage_report_path,
+        diagnostic_report_path=resolved_report_path,
+    )
+    resolved_file_type_index_paths = resolve_file_type_index_paths(
+        file_type_index_path,
         diagnostic_report_path=resolved_report_path,
     )
     app = Flask(__name__, template_folder="templates", static_folder="static")
@@ -51,6 +66,9 @@ def create_app(
             str(resolved_storage_report_paths[0])
             if resolved_storage_report_paths
             else None
+        ),
+        FILE_TYPE_INDEX_PATHS=tuple(
+            str(path) for path in resolved_file_type_index_paths
         ),
         STORAGE_ACTION_TOKEN=secrets.token_urlsafe(32),
         OPEN_STORAGE_FOLDER_HANDLER=open_containing_folder,
@@ -177,6 +195,103 @@ def create_app(
             ),
             selected_storage_report_path=selected_storage_report_path,
             storage_action_token=app.config["STORAGE_ACTION_TOKEN"],
+        )
+
+    @app.get("/storage/<drive>/file-types")
+    def file_type_explorer(drive: str) -> tuple[str, int] | str:
+        selected_report_path = Path(app.config["REPORT_PATH"])
+        try:
+            diagnostic_report = load_report(selected_report_path)
+        except ReportLoadError as error:
+            return (
+                render_template(
+                    "report_error.html",
+                    error_title=error.title,
+                    error_detail=error.detail,
+                    selected_report_path=selected_report_path,
+                    status_code=error.status_code,
+                ),
+                error.status_code,
+            )
+
+        dashboard_view = evaluate_report(diagnostic_report)
+        diagnostic_disk = next(
+            (item for item in dashboard_view["disks"] if item["drive"] == drive),
+            None,
+        )
+        if diagnostic_disk is None:
+            return (
+                render_template(
+                    "file_type_index_error.html",
+                    error_title="Drive not found in diagnostic report",
+                    error_detail=(
+                        f"The selected diagnostic report does not contain drive {drive}."
+                    ),
+                    drive=drive,
+                    selected_file_type_index_path=None,
+                ),
+                404,
+            )
+
+        configured_paths = app.config["FILE_TYPE_INDEX_PATHS"]
+        if not configured_paths:
+            return render_template(
+                "file_type_index_missing.html",
+                drive=drive,
+                selected_report_path=selected_report_path,
+            )
+        try:
+            snapshot = load_file_type_index_for_drive(configured_paths, drive)
+        except FileTypeIndexNotFoundError:
+            return render_template(
+                "file_type_index_missing.html",
+                drive=drive,
+                selected_report_path=selected_report_path,
+                selected_file_type_index_path=Path(configured_paths[0]),
+            )
+        except FileTypeIndexLoadError as error:
+            return (
+                render_template(
+                    "file_type_index_error.html",
+                    error_title=error.title,
+                    error_detail=error.detail,
+                    drive=drive,
+                    selected_file_type_index_path=None,
+                ),
+                error.status_code,
+            )
+
+        return render_template(
+            "file_type_explorer.html",
+            explorer=present_file_type_index(snapshot),
+        )
+
+    @app.get("/storage/<drive>/file-types/folders")
+    def file_type_folder_children(drive: str):
+        configured_paths = app.config["FILE_TYPE_INDEX_PATHS"]
+        if not configured_paths:
+            return jsonify(
+                ok=False,
+                message="No File-Type Explorer index is selected.",
+            ), 404
+        try:
+            snapshot = load_file_type_index_for_drive(configured_paths, drive)
+        except FileTypeIndexLoadError as error:
+            return jsonify(ok=False, message=error.detail), error.status_code
+
+        parent_id = request.args.get(
+            "parent_id", snapshot.root["folder_id"]
+        ).strip()
+        parent = snapshot.folders_by_id.get(parent_id)
+        if parent is None:
+            return jsonify(
+                ok=False,
+                message="The requested parent folder is not in this index.",
+            ), 404
+        return jsonify(
+            ok=True,
+            parent_id=parent_id,
+            children=present_file_type_children(snapshot, parent_id),
         )
 
     @app.post("/storage/<drive>/open-folder")

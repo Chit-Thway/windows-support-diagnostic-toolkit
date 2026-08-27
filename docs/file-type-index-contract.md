@@ -12,8 +12,9 @@ is:
 - public sample: [`sample_data/sample-file-type-index.json`](../sample_data/sample-file-type-index.json).
 
 The contract is produced by the explicitly invoked V2 whole-drive indexer. The
-dashboard does not start it automatically. The ranked-tree interface and new
-cleanup actions remain later milestones.
+dashboard does not start it automatically. The ranked-tree interface consumes
+the validated index read-only; matching-file selection and cleanup actions
+remain later milestones.
 
 The index is metadata-only, local, and scoped to one explicitly requested
 Windows drive. A separate index is required for each drive.
@@ -48,6 +49,30 @@ Matching file detail is bounded to 100,000 largest logical files by default;
 folder and extension aggregates remain truthful. Change the bound explicitly
 with `--max-file-details`. Optional extensions can be added with repeated
 `--custom-extension` values, but custom types remain review-only.
+
+## Load the index in the dashboard
+
+Select one or more per-drive indexes when starting the loopback-only dashboard:
+
+```powershell
+python -m dashboard `
+  --report '.\reports\first-report.json' `
+  --storage-report '.\storage-reports\c-drive-report.json' `
+  --file-type-index '.\storage-reports\c-file-type-index.json'
+```
+
+Repeat `--file-type-index` for other drives. Command-line selection takes
+priority over `FILE_TYPE_INDEX_PATH`; multiple environment paths use the
+platform path separator. A custom diagnostic report never inherits the public
+sample index silently.
+
+The File-Type Explorer validates contract `1.0.0`, isolates each index by drive
+letter, and caches it until the file metadata changes. The initial page renders
+only the root; local GET requests fetch one child level when a folder is
+expanded. Group and individual extension controls sum the stored recursive
+aggregates in the browser, so filter changes do not read the filesystem or
+start another scan. Scope selection accepts siblings and other non-overlapping
+folders but rejects a parent and descendant together.
 
 ## Top-level structure
 
