@@ -27,7 +27,7 @@
 
     <main id="main-content" class="shell cleanup-page">
         <nav class="back-nav" aria-label="Storage navigation">
-            <a href="{{ url_for('storage_drive', drive=preview.drive_letter) }}">← Return without changing anything</a>
+            <a href="{{ cleanup_return_url }}">← Return without changing anything</a>
         </nav>
 
         <section class="panel cleanup-warning" aria-labelledby="warning-heading">
@@ -72,7 +72,7 @@
             </ol>
         </section>
 
-        <form class="panel cleanup-confirmation" method="post" action="{{ url_for('storage_cleanup_confirm', drive=preview.drive_letter) }}">
+        <form class="panel cleanup-confirmation" method="post" action="{{ cleanup_confirm_url }}">
             <h2>Final confirmation</h2>
             <input type="hidden" name="action_token" value="{{ storage_action_token }}">
             <input type="hidden" name="preview_token" value="{{ preview.token }}">

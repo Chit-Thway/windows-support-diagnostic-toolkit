@@ -52,7 +52,8 @@ def test_file_type_explorer_renders_groups_and_root_only() -> None:
     assert "Changing a filter never starts another drive scan" in body
     assert "Review matching files" in body
     assert "Select all visible" in body
-    assert "Recycle Bin preview" in body
+    assert "Review Recycle Bin action" in body
+    assert "never uses permanent deletion" in body
 
 
 def test_folder_children_endpoint_returns_one_ranked_level() -> None:

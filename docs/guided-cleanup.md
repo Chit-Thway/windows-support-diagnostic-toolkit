@@ -2,8 +2,9 @@
 
 Guided cleanup began in Milestone 5 of the Storage Insights extension. The
 Milestone 8 folder-analysis amendment extends the same guarded workflow to
-conservatively eligible folder trees. It is not an automatic cleaner and it
-never permanently deletes an item as a fallback.
+conservatively eligible folder trees. File-Type Explorer V2 reuses the guarded
+workflow for exact retained file rows from a validated whole-drive index. It is
+not an automatic cleaner and it never permanently deletes an item as a fallback.
 
 ## User workflow
 
@@ -20,6 +21,13 @@ never permanently deletes an item as a fallback.
    requires the displayed confirmation phrase.
 8. Submit the one-time confirmation.
 9. Review the outcome recorded for every requested item.
+
+For File-Type Explorer, first choose extension groups and non-overlapping folder
+review scopes, filter the retained exact files, and select only the paths you
+intend to review. Installer, custom-extension, protected, application-managed,
+save-like, unavailable, and other review-only rows cannot enter the preview.
+The index may have bounded file details; omitted paths cannot be selected until
+a less-bounded index is explicitly generated.
 
 Opening a review page does not move files. Cleanup can start only from a POST
 confirmation bound to a short-lived, single-use, in-memory preview token.
@@ -92,7 +100,8 @@ adapter, so the automated suite does not move personal files:
 ```powershell
 python -m pytest tests\storage\test_cleanup.py `
   tests\dashboard\test_cleanup_tokens.py `
-  tests\dashboard\test_storage_cleanup_routes.py -q
+  tests\dashboard\test_storage_cleanup_routes.py `
+  tests\dashboard\test_file_type_cleanup_routes.py -q
 ```
 
 Run the complete regression suite with:

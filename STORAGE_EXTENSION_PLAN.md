@@ -182,8 +182,7 @@ Planned branch: `storage-extension-v2-m3-ranked-folder-tree`
 
 ### Milestone 12 / V2 Milestone 4 — Matching-file review and selection
 
-Status: Implemented and validated locally on
-`storage-extension-v2-m4-file-review`; not yet committed, pushed, or merged.
+Status: Complete and merged into `storage-extension-v2`.
 
 Show the matching files for the selected folder scopes with direct-folder and
 include-subfolders modes. Add largest/smallest, oldest/newest, natural filename,
@@ -200,7 +199,7 @@ Planned branch: `storage-extension-v2-m4-file-review`
 
 ### Milestone 13 / V2 Milestone 5 — Recycle Bin integration and final hardening
 
-Status: Planned; implementation has not started.
+Status: Complete and merged into `storage-extension-v2`.
 
 Connect eligible File-Type Explorer selections to the existing exact-path
 preview, one-time confirmation, immediate revalidation, and Recycle Bin-only

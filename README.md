@@ -306,7 +306,7 @@ python -m storage.file_type_indexer --drive 'F:\' --output 'f-file-type-index.js
 ```
 
 The V2 dashboard now exposes **Cleanup methods** on each loaded per-drive
-storage page. Method 1 opens a read-only File-Type Explorer where grouped and
+storage page. Method 1 opens a local File-Type Explorer where grouped and
 individual extension filters recalculate the existing folder aggregates,
 without another drive scan. The ranked tree loads one child level at a time,
 supports accessible expansion and breadcrumbs, and accepts multiple folder
@@ -314,7 +314,12 @@ review scopes while rejecting overlapping parent/child scopes. Matching retained
 file details can then be filtered by filename, minimum size, minimum age, exact
 extension, and folder depth; sorted deterministically; paged; and selected
 individually, by shift-range, or with visible-page selection. Protected and
-review-only rows remain unselectable. The page performs no cleanup.
+review-only rows remain unselectable. Selecting rows changes nothing. The user
+must open a separate exact-path preview, review every selected file, and submit
+an explicit confirmation before the toolkit performs immediate live
+revalidation and asks Windows to move eligible unchanged files to the Recycle
+Bin. Confirmation tokens are short-lived and single-use. The toolkit never
+falls back to permanent deletion.
 
 Real scans are written only to ignored `storage-reports/`.
 

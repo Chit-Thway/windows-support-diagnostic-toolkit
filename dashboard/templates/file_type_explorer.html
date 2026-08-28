@@ -185,7 +185,7 @@
                     <p class="eyebrow">Step 3</p>
                     <h2 id="file-review-heading">Review matching files</h2>
                 </div>
-                <span class="status-badge status-unavailable">Read-only selection</span>
+                <span class="status-badge status-warning">Explicit review required</span>
             </div>
 
             <form class="panel file-review-controls" data-file-review-form>
@@ -232,6 +232,13 @@
                 <div class="file-review-actions">
                     <button type="button" class="secondary-button" data-select-visible disabled>Select all visible</button>
                     <button type="button" class="secondary-button" data-clear-file-selection disabled>Clear selection</button>
+                    <form method="post"
+                          action="{{ url_for('file_type_cleanup_preview', drive=explorer.drive.drive_letter) }}"
+                          data-file-cleanup-form>
+                        <input type="hidden" name="action_token" value="{{ storage_action_token }}">
+                        <span data-cleanup-file-inputs></span>
+                        <button type="submit" class="danger-button" data-review-cleanup disabled>Review Recycle Bin action</button>
+                    </form>
                 </div>
             </div>
 
@@ -262,8 +269,8 @@
             </div>
 
             <details class="panel selected-file-panel">
-                <summary>Selected paths for later cleanup preview</summary>
-                <p class="support-note">Selections remain local to this browser page. No file is moved or changed in this milestone.</p>
+                <summary>Exact paths selected for cleanup preview</summary>
+                <p class="support-note">Selection alone changes nothing. The next page shows every exact path, and a separate explicit confirmation is required before live revalidation and Recycle Bin movement.</p>
                 <ul data-selected-file-list>
                     <li data-no-selected-files>No files selected yet.</li>
                 </ul>
@@ -271,8 +278,8 @@
         </section>
 
         <section class="panel milestone-note" aria-label="Milestone boundary">
-            <strong>Read-only matching-file review and selection are ready.</strong>
-            Recycle Bin preview, revalidation, confirmation, and file movement belong to Milestone 5 and are not active on this page.
+            <strong>Guided Recycle Bin cleanup is opt-in and fail-closed.</strong>
+            Only explicitly selected, currently eligible files can enter the preview. Every path is revalidated immediately before action, and the toolkit never uses permanent deletion as a fallback.
         </section>
     </main>
 </body>
