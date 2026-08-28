@@ -1,0 +1,319 @@
+{
+  "schema_version": "1.0.0",
+  "index_type": "file_type_index",
+  "index_id": "fictional-c-drive-index",
+  "generated_at_utc": "2026-08-20T04:05:06Z",
+  "indexer": {
+    "name": "File-Type Explorer Indexer",
+    "version": "0.2.0",
+    "platform": "Windows",
+    "mode": "metadata_only"
+  },
+  "drive": {
+    "drive_letter": "C:",
+    "volume_label": "Fictional System",
+    "filesystem": "NTFS",
+    "total_bytes": 536870912000,
+    "used_bytes": 322122547200,
+    "free_bytes": 214748364800,
+    "observed_at_utc": "2026-08-20T04:05:06Z"
+  },
+  "scan": {
+    "started_at_utc": "2026-08-20T04:00:00Z",
+    "completed_at_utc": "2026-08-20T04:05:06Z",
+    "duration_ms": 306000,
+    "status": "complete",
+    "aggregate_coverage": "exact",
+    "files_examined": 9,
+    "directories_examined": 10,
+    "logical_bytes_observed": 70782976,
+    "zero_byte_files": 1,
+    "matching_files": 8,
+    "matching_logical_bytes": 70782976,
+    "inaccessible_path_details_retained": 0,
+    "inaccessible_path_details_omitted": 0,
+    "scan_error_details_retained": 0,
+    "scan_error_details_omitted": 0
+  },
+  "scope": {
+    "root_path": "C:\\",
+    "recursive": true,
+    "explicitly_requested": true
+  },
+  "extension_groups": [
+    {
+      "group_id": "documents",
+      "label": "Documents",
+      "extensions": [".pdf", ".doc", ".docx", ".odt", ".rtf", ".txt", ".ppt", ".pptx", ".xls", ".xlsx"]
+    },
+    {
+      "group_id": "videos",
+      "label": "Videos",
+      "extensions": [".mp4", ".mkv", ".avi", ".mov", ".wmv", ".webm"]
+    },
+    {
+      "group_id": "audio",
+      "label": "Audio",
+      "extensions": [".mp3", ".wav", ".flac", ".m4a", ".aac"]
+    },
+    {
+      "group_id": "images",
+      "label": "Images",
+      "extensions": [".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic"]
+    },
+    {
+      "group_id": "archives_disk_images",
+      "label": "Archives and disk images",
+      "extensions": [".zip", ".rar", ".7z", ".tar", ".gz", ".iso"]
+    },
+    {
+      "group_id": "installers",
+      "label": "Installers",
+      "extensions": [".exe", ".msi", ".msix", ".appx"]
+    }
+  ],
+  "custom_extensions": [
+    ".8aa3f8beea3f8dfb32ecd478c874ca438d2eb07f78decf5b0a7121c3557c45ed"
+  ],
+  "folders": [
+    {
+      "folder_id": "folder-root",
+      "parent_id": null,
+      "path": "C:\\",
+      "name": "C:\\",
+      "depth": 0,
+      "direct_file_count": 0,
+      "recursive_file_count": 9,
+      "direct_logical_bytes": 0,
+      "recursive_logical_bytes": 70782976,
+      "direct_zero_byte_files": 0,
+      "recursive_zero_byte_files": 1,
+      "extension_totals": [
+        {"extension": ".pdf", "direct_file_count": 0, "direct_logical_bytes": 0, "recursive_file_count": 4, "recursive_logical_bytes": 15204352},
+        {"extension": ".docx", "direct_file_count": 0, "direct_logical_bytes": 0, "recursive_file_count": 1, "recursive_logical_bytes": 2097152},
+        {"extension": ".xlsx", "direct_file_count": 0, "direct_logical_bytes": 0, "recursive_file_count": 1, "recursive_logical_bytes": 1048576},
+        {"extension": ".mp4", "direct_file_count": 0, "direct_logical_bytes": 0, "recursive_file_count": 1, "recursive_logical_bytes": 52428800},
+        {"extension": ".8aa3f8beea3f8dfb32ecd478c874ca438d2eb07f78decf5b0a7121c3557c45ed", "direct_file_count": 0, "direct_logical_bytes": 0, "recursive_file_count": 1, "recursive_logical_bytes": 4096}
+      ],
+      "access": {
+        "state": "normal",
+        "reason_code": "explicit_drive_scope",
+        "explanation": "The fictional drive root was explicitly selected for local analysis."
+      }
+    },
+    {
+      "folder_id": "folder-users",
+      "parent_id": "folder-root",
+      "path": "C:\\Users",
+      "name": "Users",
+      "depth": 1,
+      "direct_file_count": 0,
+      "recursive_file_count": 7,
+      "direct_logical_bytes": 0,
+      "recursive_logical_bytes": 69210112,
+      "direct_zero_byte_files": 0,
+      "recursive_zero_byte_files": 1,
+      "extension_totals": [
+        {"extension": ".pdf", "direct_file_count": 0, "direct_logical_bytes": 0, "recursive_file_count": 2, "recursive_logical_bytes": 13631488},
+        {"extension": ".docx", "direct_file_count": 0, "direct_logical_bytes": 0, "recursive_file_count": 1, "recursive_logical_bytes": 2097152},
+        {"extension": ".xlsx", "direct_file_count": 0, "direct_logical_bytes": 0, "recursive_file_count": 1, "recursive_logical_bytes": 1048576},
+        {"extension": ".mp4", "direct_file_count": 0, "direct_logical_bytes": 0, "recursive_file_count": 1, "recursive_logical_bytes": 52428800},
+        {"extension": ".8aa3f8beea3f8dfb32ecd478c874ca438d2eb07f78decf5b0a7121c3557c45ed", "direct_file_count": 0, "direct_logical_bytes": 0, "recursive_file_count": 1, "recursive_logical_bytes": 4096}
+      ],
+      "access": {
+        "state": "normal",
+        "reason_code": "user_content_container",
+        "explanation": "The folder contains user profiles and is visible for navigation."
+      }
+    },
+    {
+      "folder_id": "folder-profile",
+      "parent_id": "folder-users",
+      "path": "C:\\Users\\fictional.user",
+      "name": "fictional.user",
+      "depth": 2,
+      "direct_file_count": 0,
+      "recursive_file_count": 7,
+      "direct_logical_bytes": 0,
+      "recursive_logical_bytes": 69210112,
+      "direct_zero_byte_files": 0,
+      "recursive_zero_byte_files": 1,
+      "extension_totals": [
+        {"extension": ".pdf", "direct_file_count": 0, "direct_logical_bytes": 0, "recursive_file_count": 2, "recursive_logical_bytes": 13631488},
+        {"extension": ".docx", "direct_file_count": 0, "direct_logical_bytes": 0, "recursive_file_count": 1, "recursive_logical_bytes": 2097152},
+        {"extension": ".xlsx", "direct_file_count": 0, "direct_logical_bytes": 0, "recursive_file_count": 1, "recursive_logical_bytes": 1048576},
+        {"extension": ".mp4", "direct_file_count": 0, "direct_logical_bytes": 0, "recursive_file_count": 1, "recursive_logical_bytes": 52428800},
+        {"extension": ".8aa3f8beea3f8dfb32ecd478c874ca438d2eb07f78decf5b0a7121c3557c45ed", "direct_file_count": 0, "direct_logical_bytes": 0, "recursive_file_count": 1, "recursive_logical_bytes": 4096}
+      ],
+      "access": {
+        "state": "normal",
+        "reason_code": "user_profile",
+        "explanation": "The fictional profile is visible for user-directed review."
+      }
+    },
+    {
+      "folder_id": "folder-downloads",
+      "parent_id": "folder-profile",
+      "path": "C:\\Users\\fictional.user\\Downloads",
+      "name": "Downloads",
+      "depth": 3,
+      "direct_file_count": 4,
+      "recursive_file_count": 5,
+      "direct_logical_bytes": 65015808,
+      "recursive_logical_bytes": 65015808,
+      "direct_zero_byte_files": 0,
+      "recursive_zero_byte_files": 1,
+      "extension_totals": [
+        {"extension": ".pdf", "direct_file_count": 1, "direct_logical_bytes": 10485760, "recursive_file_count": 1, "recursive_logical_bytes": 10485760},
+        {"extension": ".docx", "direct_file_count": 1, "direct_logical_bytes": 2097152, "recursive_file_count": 1, "recursive_logical_bytes": 2097152},
+        {"extension": ".mp4", "direct_file_count": 1, "direct_logical_bytes": 52428800, "recursive_file_count": 1, "recursive_logical_bytes": 52428800},
+        {"extension": ".8aa3f8beea3f8dfb32ecd478c874ca438d2eb07f78decf5b0a7121c3557c45ed", "direct_file_count": 1, "direct_logical_bytes": 4096, "recursive_file_count": 1, "recursive_logical_bytes": 4096}
+      ],
+      "access": {
+        "state": "normal",
+        "reason_code": "user_selected_content",
+        "explanation": "Files remain subject to individual review and confirmation."
+      }
+    },
+    {
+      "folder_id": "folder-empty-root",
+      "parent_id": "folder-downloads",
+      "path": "C:\\Users\\fictional.user\\Downloads\\EmptyArchive",
+      "name": "EmptyArchive",
+      "depth": 4,
+      "direct_file_count": 0,
+      "recursive_file_count": 1,
+      "direct_logical_bytes": 0,
+      "recursive_logical_bytes": 0,
+      "direct_zero_byte_files": 0,
+      "recursive_zero_byte_files": 1,
+      "extension_totals": [],
+      "access": {"state": "normal", "reason_code": "empty_tree_context", "explanation": "The highest fictional empty tree is retained as one summary."}
+    },
+    {
+      "folder_id": "folder-empty-middle",
+      "parent_id": "folder-empty-root",
+      "path": "C:\\Users\\fictional.user\\Downloads\\EmptyArchive\\Cache",
+      "name": "Cache",
+      "depth": 5,
+      "direct_file_count": 0,
+      "recursive_file_count": 1,
+      "direct_logical_bytes": 0,
+      "recursive_logical_bytes": 0,
+      "direct_zero_byte_files": 0,
+      "recursive_zero_byte_files": 1,
+      "extension_totals": [],
+      "access": {"state": "normal", "reason_code": "empty_tree_descendant", "explanation": "This descendant is represented by the highest empty-tree summary."}
+    },
+    {
+      "folder_id": "folder-empty-leaf",
+      "parent_id": "folder-empty-middle",
+      "path": "C:\\Users\\fictional.user\\Downloads\\EmptyArchive\\Cache\\Leaf",
+      "name": "Leaf",
+      "depth": 6,
+      "direct_file_count": 1,
+      "recursive_file_count": 1,
+      "direct_logical_bytes": 0,
+      "recursive_logical_bytes": 0,
+      "direct_zero_byte_files": 1,
+      "recursive_zero_byte_files": 1,
+      "extension_totals": [],
+      "access": {"state": "normal", "reason_code": "empty_tree_descendant", "explanation": "The zero-byte descendant is counted but not retained as a file row."}
+    },
+    {
+      "folder_id": "folder-documents",
+      "parent_id": "folder-profile",
+      "path": "C:\\Users\\fictional.user\\Documents",
+      "name": "Documents",
+      "depth": 3,
+      "direct_file_count": 2,
+      "recursive_file_count": 2,
+      "direct_logical_bytes": 4194304,
+      "recursive_logical_bytes": 4194304,
+      "direct_zero_byte_files": 0,
+      "recursive_zero_byte_files": 0,
+      "extension_totals": [
+        {"extension": ".pdf", "direct_file_count": 1, "direct_logical_bytes": 3145728, "recursive_file_count": 1, "recursive_logical_bytes": 3145728},
+        {"extension": ".xlsx", "direct_file_count": 1, "direct_logical_bytes": 1048576, "recursive_file_count": 1, "recursive_logical_bytes": 1048576}
+      ],
+      "access": {
+        "state": "normal",
+        "reason_code": "user_selected_content",
+        "explanation": "Files remain subject to individual review and confirmation."
+      }
+    },
+    {
+      "folder_id": "folder-program-files",
+      "parent_id": "folder-root",
+      "path": "C:\\Program Files",
+      "name": "Program Files",
+      "depth": 1,
+      "direct_file_count": 1,
+      "recursive_file_count": 1,
+      "direct_logical_bytes": 1048576,
+      "recursive_logical_bytes": 1048576,
+      "direct_zero_byte_files": 0,
+      "recursive_zero_byte_files": 0,
+      "extension_totals": [
+        {"extension": ".pdf", "direct_file_count": 1, "direct_logical_bytes": 1048576, "recursive_file_count": 1, "recursive_logical_bytes": 1048576}
+      ],
+      "access": {
+        "state": "protected",
+        "reason_code": "installed_application_path",
+        "explanation": "Installed application files are visible for context but cannot be bulk selected."
+      }
+    },
+    {
+      "folder_id": "folder-windows",
+      "parent_id": "folder-root",
+      "path": "C:\\Windows",
+      "name": "Windows",
+      "depth": 1,
+      "direct_file_count": 1,
+      "recursive_file_count": 1,
+      "direct_logical_bytes": 524288,
+      "recursive_logical_bytes": 524288,
+      "direct_zero_byte_files": 0,
+      "recursive_zero_byte_files": 0,
+      "extension_totals": [
+        {"extension": ".pdf", "direct_file_count": 1, "direct_logical_bytes": 524288, "recursive_file_count": 1, "recursive_logical_bytes": 524288}
+      ],
+      "access": {
+        "state": "protected",
+        "reason_code": "windows_system_path",
+        "explanation": "Windows-managed files are visible for context and are never cleanup selectable."
+      }
+    }
+  ],
+  "empty_summary": {
+    "zero_byte_files": 1,
+    "collapsed_tree_count": 1,
+    "trees": [
+      {"highest_folder_id": "folder-empty-root", "path": "C:\\Users\\fictional.user\\Downloads\\EmptyArchive", "descendant_zero_byte_files": 1, "descendant_directories": 2, "recoverable_bytes": 0}
+    ]
+  },
+  "file_detail_summary": {
+    "coverage": "complete",
+    "retained_files": 8,
+    "omitted_files": 0,
+    "retained_logical_bytes": 70782976,
+    "omitted_logical_bytes": 0
+  },
+  "files": [
+    {"file_id": "file-001", "folder_id": "folder-downloads", "path": "C:\\Users\\fictional.user\\Downloads\\support-guide.pdf", "name": "support-guide.pdf", "extension": ".pdf", "size_bytes": 10485760, "modified_at_utc": "2023-03-01T02:00:00Z", "selection_state": "selectable", "protection_reason": "Personal files require explicit human review."},
+    {"file_id": "file-002", "folder_id": "folder-downloads", "path": "C:\\Users\\fictional.user\\Downloads\\training-notes.docx", "name": "training-notes.docx", "extension": ".docx", "size_bytes": 2097152, "modified_at_utc": "2024-04-02T03:00:00Z", "selection_state": "selectable", "protection_reason": "Personal files require explicit human review."},
+    {"file_id": "file-003", "folder_id": "folder-downloads", "path": "C:\\Users\\fictional.user\\Downloads\\demo-recording.mp4", "name": "demo-recording.mp4", "extension": ".mp4", "size_bytes": 52428800, "modified_at_utc": "2022-05-03T04:00:00Z", "selection_state": "selectable", "protection_reason": "Personal files require explicit human review."},
+    {"file_id": "file-004", "folder_id": "folder-downloads", "path": "C:\\Users\\fictional.user\\Downloads\\cache-entry.8aa3f8beea3f8dfb32ecd478c874ca438d2eb07f78decf5b0a7121c3557c45ed", "name": "cache-entry.8aa3f8beea3f8dfb32ecd478c874ca438d2eb07f78decf5b0a7121c3557c45ed", "extension": ".8aa3f8beea3f8dfb32ecd478c874ca438d2eb07f78decf5b0a7121c3557c45ed", "size_bytes": 4096, "modified_at_utc": "2025-06-04T05:00:00Z", "selection_state": "review_only", "protection_reason": "A custom extension organises review but does not imply removal safety."},
+    {"file_id": "file-005", "folder_id": "folder-documents", "path": "C:\\Users\\fictional.user\\Documents\\handbook.pdf", "name": "handbook.pdf", "extension": ".pdf", "size_bytes": 3145728, "modified_at_utc": "2021-07-05T06:00:00Z", "selection_state": "selectable", "protection_reason": "Personal files require explicit human review."},
+    {"file_id": "file-006", "folder_id": "folder-documents", "path": "C:\\Users\\fictional.user\\Documents\\fictional-budget.xlsx", "name": "fictional-budget.xlsx", "extension": ".xlsx", "size_bytes": 1048576, "modified_at_utc": "2024-08-06T07:00:00Z", "selection_state": "selectable", "protection_reason": "Personal files require explicit human review."},
+    {"file_id": "file-007", "folder_id": "folder-program-files", "path": "C:\\Program Files\\application-manual.pdf", "name": "application-manual.pdf", "extension": ".pdf", "size_bytes": 1048576, "modified_at_utc": "2020-09-07T08:00:00Z", "selection_state": "protected", "protection_reason": "Installed application content cannot be selected for cleanup."},
+    {"file_id": "file-008", "folder_id": "folder-windows", "path": "C:\\Windows\\system-help.pdf", "name": "system-help.pdf", "extension": ".pdf", "size_bytes": 524288, "modified_at_utc": "2019-10-08T09:00:00Z", "selection_state": "protected", "protection_reason": "Windows-managed content cannot be selected for cleanup."}
+  ],
+  "inaccessible_paths": [],
+  "scan_errors": [],
+  "limitations": [
+    "Modification time and extension organise review but do not prove that a file is disposable.",
+    "One zero-byte file was counted in aggregate and intentionally omitted from individual file details.",
+    "Logical folder sizes do not include filesystem allocation overhead."
+  ]
+}

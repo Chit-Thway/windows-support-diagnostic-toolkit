@@ -1,0 +1,1215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/windows-support-diagnostic-toolkit/storage-report.schema.json",
+  "title": "Storage Insights Analysis Report",
+  "description": "Version 1.0.0 contract for local, metadata-only storage analysis.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "report_type",
+    "generated_at_utc",
+    "scanner",
+    "scan",
+    "drive",
+    "scan_scope",
+    "accounting",
+    "candidate_summary",
+    "candidates",
+    "inaccessible_paths",
+    "scan_errors",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "report_type": {
+      "const": "storage_analysis"
+    },
+    "generated_at_utc": {
+      "$ref": "#/$defs/utcDateTime"
+    },
+    "scanner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version",
+        "platform",
+        "mode"
+      ],
+      "properties": {
+        "name": {
+          "const": "Storage Insights Scanner"
+        },
+        "version": {
+          "$ref": "#/$defs/semanticVersion"
+        },
+        "platform": {
+          "const": "Windows"
+        },
+        "mode": {
+          "const": "metadata_only"
+        }
+      }
+    },
+    "scan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "started_at_utc",
+        "completed_at_utc",
+        "duration_ms",
+        "status",
+        "detail_coverage",
+        "aggregate_coverage",
+        "files_examined",
+        "directories_examined",
+        "bytes_examined",
+        "candidate_details_retained",
+        "candidate_details_omitted"
+      ],
+      "properties": {
+        "started_at_utc": {
+          "$ref": "#/$defs/utcDateTime"
+        },
+        "completed_at_utc": {
+          "$ref": "#/$defs/utcDateTime"
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "status": {
+          "enum": [
+            "complete",
+            "partial",
+            "cancelled",
+            "failed"
+          ]
+        },
+        "detail_coverage": {
+          "enum": [
+            "complete",
+            "bounded",
+            "partial",
+            "unavailable"
+          ]
+        },
+        "aggregate_coverage": {
+          "enum": [
+            "exact",
+            "estimated",
+            "partial",
+            "unavailable"
+          ]
+        },
+        "files_examined": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "directories_examined": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bytes_examined": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "allocated_bytes_examined": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "candidate_details_retained": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "candidate_details_omitted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "folder_candidate_details_retained": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "folder_candidate_details_omitted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "inaccessible_path_details_retained": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "inaccessible_path_details_omitted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "scan_error_details_retained": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "scan_error_details_omitted": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "drive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "drive_letter",
+        "volume_label",
+        "filesystem",
+        "total_bytes",
+        "used_bytes",
+        "free_bytes",
+        "percent_free",
+        "observed_at_utc"
+      ],
+      "properties": {
+        "drive_letter": {
+          "type": "string",
+          "pattern": "^[A-Z]:$"
+        },
+        "volume_label": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        },
+        "filesystem": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 32
+        },
+        "total_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "used_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "free_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "percent_free": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "observed_at_utc": {
+          "$ref": "#/$defs/utcDateTime"
+        }
+      }
+    },
+    "scan_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "roots",
+        "options"
+      ],
+      "properties": {
+        "roots": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {
+            "$ref": "#/$defs/scanRoot"
+          }
+        },
+        "options": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "stale_after_days",
+            "large_file_threshold_bytes",
+            "incomplete_min_age_hours",
+            "temporary_min_age_hours",
+            "maximum_candidates_retained",
+            "use_last_access_as_classification_evidence"
+          ],
+          "properties": {
+            "stale_after_days": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "large_file_threshold_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "incomplete_min_age_hours": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "temporary_min_age_hours": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "maximum_candidates_retained": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            },
+            "maximum_folder_candidates_retained": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50000
+            },
+            "maximum_issue_records": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000
+            },
+            "use_last_access_as_classification_evidence": {
+              "const": false
+            },
+            "discover_development_insights": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "accounting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "coverage",
+        "categories"
+      ],
+      "properties": {
+        "coverage": {
+          "enum": [
+            "exact",
+            "estimated",
+            "partial"
+          ]
+        },
+        "categories": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "free_space",
+            "protected_system",
+            "installed_applications",
+            "user_content",
+            "development_tools_and_caches",
+            "other_or_unreadable"
+          ],
+          "properties": {
+            "free_space": {
+              "$ref": "#/$defs/categoryTotal"
+            },
+            "protected_system": {
+              "$ref": "#/$defs/categoryTotal"
+            },
+            "installed_applications": {
+              "$ref": "#/$defs/categoryTotal"
+            },
+            "user_content": {
+              "$ref": "#/$defs/categoryTotal"
+            },
+            "development_tools_and_caches": {
+              "$ref": "#/$defs/categoryTotal"
+            },
+            "other_or_unreadable": {
+              "$ref": "#/$defs/categoryTotal"
+            }
+          }
+        }
+      }
+    },
+    "candidate_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "accounting_method",
+        "total_unique_candidates",
+        "total_unique_candidate_bytes",
+        "retained_candidates",
+        "retained_unique_candidate_bytes",
+        "omitted_candidates",
+        "attributes"
+      ],
+      "properties": {
+        "accounting_method": {
+          "const": "unique_candidate_id"
+        },
+        "total_unique_candidates": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_unique_candidate_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "retained_candidates": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "retained_unique_candidate_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_unique_candidate_allocated_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "retained_unique_candidate_allocated_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "omitted_candidates": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "stale",
+            "likely_incomplete",
+            "large",
+            "empty",
+            "temporary",
+            "development_cache",
+            "protected",
+            "unavailable"
+          ],
+          "properties": {
+            "stale": {
+              "$ref": "#/$defs/attributeSummary"
+            },
+            "likely_incomplete": {
+              "$ref": "#/$defs/attributeSummary"
+            },
+            "large": {
+              "$ref": "#/$defs/attributeSummary"
+            },
+            "empty": {
+              "$ref": "#/$defs/attributeSummary"
+            },
+            "temporary": {
+              "$ref": "#/$defs/attributeSummary"
+            },
+            "development_cache": {
+              "$ref": "#/$defs/attributeSummary"
+            },
+            "protected": {
+              "$ref": "#/$defs/attributeSummary"
+            },
+            "unavailable": {
+              "$ref": "#/$defs/attributeSummary"
+            }
+          }
+        }
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/candidate"
+      }
+    },
+    "folder_candidate_summary": {
+      "$ref": "#/$defs/folderCandidateSummary"
+    },
+    "folder_candidates": {
+      "type": "array",
+      "maxItems": 50000,
+      "items": {
+        "$ref": "#/$defs/candidate"
+      }
+    },
+    "inaccessible_paths": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "$ref": "#/$defs/inaccessiblePath"
+      }
+    },
+    "scan_errors": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "$ref": "#/$defs/scanError"
+      }
+    },
+    "development_insights": {
+      "$ref": "#/$defs/developmentInsights"
+    },
+    "limitations": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "scan": {
+            "properties": {
+              "status": {
+                "const": "complete"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "inaccessible_paths": {
+            "maxItems": 0
+          },
+          "scan_errors": {
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "scan": {
+            "properties": {
+              "status": {
+                "const": "partial"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          }
+        }
+      },
+      "then": {
+        "anyOf": [
+          {
+            "properties": {
+              "inaccessible_paths": {
+                "minItems": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "scan_errors": {
+                "minItems": 1
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "$defs": {
+    "utcDateTime": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "semanticVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "path": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 32767,
+      "pattern": "^[^\\r\\n]+$"
+    },
+    "developmentInsights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "locations", "errors", "limitations"],
+      "properties": {
+        "status": {
+          "enum": ["complete", "partial", "unavailable"]
+        },
+        "locations": {
+          "type": "array",
+          "maxItems": 500,
+          "items": {
+            "$ref": "#/$defs/developmentLocation"
+          }
+        },
+        "errors": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/developmentError"
+          }
+        },
+        "errors_omitted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "limitations": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      }
+    },
+    "developmentLocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "location_id",
+        "ecosystem",
+        "kind",
+        "path",
+        "source",
+        "display_name",
+        "version",
+        "active",
+        "within_scan_scope",
+        "files_observed",
+        "bytes_observed",
+        "measurement",
+        "coverage",
+        "cleanup_policy",
+        "suggested_command",
+        "automatic_cleanup_candidate",
+        "explanation",
+        "consequence"
+      ],
+      "properties": {
+        "location_id": {
+          "type": "string",
+          "pattern": "^development-[0-9]{3}$"
+        },
+        "ecosystem": {
+          "enum": ["python", "java"]
+        },
+        "kind": {
+          "enum": ["virtual_environment", "package_cache", "runtime_or_sdk"]
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "source": {
+          "enum": ["pyvenv_cfg", "pip_cache_dir", "java_system_properties", "java_home"]
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "version": {
+          "type": ["string", "null"],
+          "maxLength": 100
+        },
+        "active": {
+          "type": ["boolean", "null"]
+        },
+        "within_scan_scope": {
+          "type": "boolean"
+        },
+        "files_observed": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "bytes_observed": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "measurement": {
+          "enum": ["observed_selected_roots", "not_measured"]
+        },
+        "coverage": {
+          "enum": ["complete", "partial", "not_applicable"]
+        },
+        "cleanup_policy": {
+          "enum": ["informational_only", "supported_command_only"]
+        },
+        "suggested_command": {
+          "type": ["string", "null"],
+          "maxLength": 500
+        },
+        "automatic_cleanup_candidate": {
+          "const": false
+        },
+        "explanation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "consequence": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      }
+    },
+    "developmentError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ecosystem", "code", "message"],
+      "properties": {
+        "ecosystem": {
+          "enum": ["python", "java"]
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$",
+          "maxLength": 100
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      }
+    },
+    "scanRoot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requested_path",
+        "canonical_path",
+        "include_subdirectories",
+        "status",
+        "files_examined",
+        "directories_examined",
+        "bytes_examined",
+        "errors_count"
+      ],
+      "properties": {
+        "requested_path": {
+          "$ref": "#/$defs/path"
+        },
+        "canonical_path": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/path"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "include_subdirectories": {
+          "type": "boolean"
+        },
+        "status": {
+          "enum": [
+            "complete",
+            "partial",
+            "cancelled",
+            "skipped",
+            "failed"
+          ]
+        },
+        "files_examined": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "directories_examined": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bytes_examined": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "allocated_bytes_examined": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "errors_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "categoryTotal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bytes",
+        "measurement",
+        "explanation"
+      ],
+      "properties": {
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "measurement": {
+          "enum": [
+            "exact",
+            "estimated",
+            "unavailable"
+          ]
+        },
+        "explanation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      }
+    },
+    "attributeSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_count",
+        "unique_bytes"
+      ],
+      "properties": {
+        "candidate_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unique_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "folderAttributeSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_count",
+        "overlapping_bytes"
+      ],
+      "properties": {
+        "candidate_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "overlapping_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "folderCandidateSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "accounting_method",
+        "total_candidates",
+        "retained_candidates",
+        "omitted_candidates",
+        "largest_candidate_allocated_bytes",
+        "attributes"
+      ],
+      "properties": {
+        "accounting_method": {
+          "const": "overlapping_hierarchy"
+        },
+        "total_candidates": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "retained_candidates": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "omitted_candidates": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "largest_candidate_allocated_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "stale",
+            "likely_incomplete",
+            "large",
+            "empty",
+            "temporary",
+            "development_cache",
+            "protected",
+            "unavailable"
+          ],
+          "properties": {
+            "stale": {"$ref": "#/$defs/folderAttributeSummary"},
+            "likely_incomplete": {"$ref": "#/$defs/folderAttributeSummary"},
+            "large": {"$ref": "#/$defs/folderAttributeSummary"},
+            "empty": {"$ref": "#/$defs/folderAttributeSummary"},
+            "temporary": {"$ref": "#/$defs/folderAttributeSummary"},
+            "development_cache": {"$ref": "#/$defs/folderAttributeSummary"},
+            "protected": {"$ref": "#/$defs/folderAttributeSummary"},
+            "unavailable": {"$ref": "#/$defs/folderAttributeSummary"}
+          }
+        }
+      }
+    },
+    "candidateAttribute": {
+      "enum": [
+        "stale",
+        "likely_incomplete",
+        "large",
+        "empty",
+        "temporary",
+        "development_cache",
+        "protected",
+        "unavailable"
+      ]
+    },
+    "storageCategory": {
+      "enum": [
+        "protected_system",
+        "installed_applications",
+        "user_content",
+        "development_tools_and_caches",
+        "other_or_unreadable"
+      ]
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "path",
+        "scan_root",
+        "name",
+        "extension",
+        "size_bytes",
+        "created_at_utc",
+        "modified_at_utc",
+        "last_accessed_at_utc",
+        "last_access_reliability",
+        "storage_category",
+        "attributes",
+        "evidence",
+        "confidence",
+        "protection",
+        "is_regular_file",
+        "is_reparse_point"
+      ],
+      "properties": {
+        "item_type": {
+          "enum": ["file", "folder"]
+        },
+        "candidate_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[A-Za-z0-9._-]+$"
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "scan_root": {
+          "$ref": "#/$defs/path"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "extension": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255
+        },
+        "size_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "allocated_size_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "created_at_utc": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/utcDateTime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "modified_at_utc": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/utcDateTime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "last_accessed_at_utc": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/utcDateTime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "last_access_reliability": {
+          "enum": [
+            "limited",
+            "unavailable"
+          ]
+        },
+        "storage_category": {
+          "$ref": "#/$defs/storageCategory"
+        },
+        "attributes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/candidateAttribute"
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/classificationEvidence"
+          }
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "removal_risk": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "protected"
+          ]
+        },
+        "protection": {
+          "$ref": "#/$defs/protection"
+        },
+        "is_regular_file": {
+          "type": "boolean"
+        },
+        "is_directory": {
+          "type": "boolean"
+        },
+        "is_reparse_point": {
+          "type": "boolean"
+        },
+        "file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "directory_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "newest_descendant_modified_at_utc": {
+          "oneOf": [
+            {"$ref": "#/$defs/utcDateTime"},
+            {"type": "null"}
+          ]
+        },
+        "oldest_descendant_modified_at_utc": {
+          "oneOf": [
+            {"$ref": "#/$defs/utcDateTime"},
+            {"type": "null"}
+          ]
+        },
+        "contains_unavailable_items": {
+          "type": "boolean"
+        },
+        "contains_high_risk_items": {
+          "type": "boolean"
+        },
+        "tree_metadata_fingerprint": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "classificationEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attribute",
+        "code",
+        "description",
+        "observed_value"
+      ],
+      "properties": {
+        "attribute": {
+          "$ref": "#/$defs/candidateAttribute"
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$",
+          "maxLength": 100
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "observed_value": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
+    "protection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eligibility",
+        "reason_code",
+        "explanation"
+      ],
+      "properties": {
+        "eligibility": {
+          "enum": [
+            "eligible",
+            "review_only",
+            "protected",
+            "unavailable"
+          ]
+        },
+        "reason_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100
+        },
+        "explanation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      }
+    },
+    "inaccessiblePath": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "scan_root",
+        "error_type",
+        "message",
+        "occurred_at_utc"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "scan_root": {
+          "$ref": "#/$defs/path"
+        },
+        "error_type": {
+          "enum": [
+            "access_denied",
+            "unreadable_metadata",
+            "disappeared",
+            "reparse_point",
+            "path_unavailable"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "occurred_at_utc": {
+          "$ref": "#/$defs/utcDateTime"
+        }
+      }
+    },
+    "scanError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "scope",
+        "path",
+        "message",
+        "recoverable",
+        "occurred_at_utc"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$",
+          "maxLength": 100
+        },
+        "scope": {
+          "enum": [
+            "report",
+            "drive",
+            "root",
+            "directory",
+            "file",
+            "accounting"
+          ]
+        },
+        "path": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/path"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "recoverable": {
+          "type": "boolean"
+        },
+        "occurred_at_utc": {
+          "$ref": "#/$defs/utcDateTime"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,191 @@
+{
+  "schema_version": "1.0.0",
+  "report_type": "storage_analysis",
+  "generated_at_utc": "2026-07-23T08:45:10Z",
+  "scanner": {
+    "name": "Storage Insights Scanner",
+    "version": "0.1.0",
+    "platform": "Windows",
+    "mode": "metadata_only"
+  },
+  "scan": {
+    "started_at_utc": "2026-07-23T08:45:00Z",
+    "completed_at_utc": "2026-07-23T08:45:10Z",
+    "duration_ms": 10000,
+    "status": "partial",
+    "detail_coverage": "partial",
+    "aggregate_coverage": "partial",
+    "files_examined": 87,
+    "directories_examined": 12,
+    "bytes_examined": 15000000000,
+    "candidate_details_retained": 1,
+    "candidate_details_omitted": 0
+  },
+  "drive": {
+    "drive_letter": "C:",
+    "volume_label": "Fictional Partial",
+    "filesystem": "NTFS",
+    "total_bytes": 256000000000,
+    "used_bytes": 206000000000,
+    "free_bytes": 50000000000,
+    "percent_free": 19.53,
+    "observed_at_utc": "2026-07-23T08:45:00Z"
+  },
+  "scan_scope": {
+    "roots": [
+      {
+        "requested_path": "C:\\Users\\fictional.avery",
+        "canonical_path": "C:\\Users\\fictional.avery",
+        "include_subdirectories": true,
+        "status": "partial",
+        "files_examined": 87,
+        "directories_examined": 12,
+        "bytes_examined": 15000000000,
+        "errors_count": 1
+      }
+    ],
+    "options": {
+      "stale_after_days": 730,
+      "large_file_threshold_bytes": 1073741824,
+      "incomplete_min_age_hours": 24,
+      "temporary_min_age_hours": 168,
+      "maximum_candidates_retained": 5000,
+      "use_last_access_as_classification_evidence": false
+    }
+  },
+  "accounting": {
+    "coverage": "partial",
+    "categories": {
+      "free_space": {
+        "bytes": 50000000000,
+        "measurement": "exact",
+        "explanation": "Free bytes reported by the fictional drive summary."
+      },
+      "protected_system": {
+        "bytes": 70000000000,
+        "measurement": "estimated",
+        "explanation": "Estimated Windows and protected system storage."
+      },
+      "installed_applications": {
+        "bytes": 50000000000,
+        "measurement": "estimated",
+        "explanation": "Estimated installed application storage."
+      },
+      "user_content": {
+        "bytes": 45000000000,
+        "measurement": "estimated",
+        "explanation": "Estimated user content from the accessible portion of the scan."
+      },
+      "development_tools_and_caches": {
+        "bytes": 20000000000,
+        "measurement": "estimated",
+        "explanation": "Estimated development tools and supported cache locations."
+      },
+      "other_or_unreadable": {
+        "bytes": 21000000000,
+        "measurement": "estimated",
+        "explanation": "Includes storage that could not be classified because one fictional path was unreadable."
+      }
+    }
+  },
+  "candidate_summary": {
+    "accounting_method": "unique_candidate_id",
+    "total_unique_candidates": 1,
+    "total_unique_candidate_bytes": 0,
+    "retained_candidates": 1,
+    "retained_unique_candidate_bytes": 0,
+    "omitted_candidates": 0,
+    "attributes": {
+      "stale": {
+        "candidate_count": 0,
+        "unique_bytes": 0
+      },
+      "likely_incomplete": {
+        "candidate_count": 0,
+        "unique_bytes": 0
+      },
+      "large": {
+        "candidate_count": 0,
+        "unique_bytes": 0
+      },
+      "empty": {
+        "candidate_count": 0,
+        "unique_bytes": 0
+      },
+      "temporary": {
+        "candidate_count": 0,
+        "unique_bytes": 0
+      },
+      "development_cache": {
+        "candidate_count": 0,
+        "unique_bytes": 0
+      },
+      "protected": {
+        "candidate_count": 0,
+        "unique_bytes": 0
+      },
+      "unavailable": {
+        "candidate_count": 1,
+        "unique_bytes": 0
+      }
+    }
+  },
+  "candidates": [
+    {
+      "candidate_id": "partial-001",
+      "path": "C:\\Users\\fictional.avery\\PrivateArchive\\locked-fragment.tmp",
+      "scan_root": "C:\\Users\\fictional.avery",
+      "name": "locked-fragment.tmp",
+      "extension": ".tmp",
+      "size_bytes": null,
+      "created_at_utc": null,
+      "modified_at_utc": null,
+      "last_accessed_at_utc": null,
+      "last_access_reliability": "unavailable",
+      "storage_category": "other_or_unreadable",
+      "attributes": [
+        "unavailable"
+      ],
+      "evidence": [
+        {
+          "attribute": "unavailable",
+          "code": "metadata_unreadable",
+          "description": "The fictional file metadata could not be read, so it cannot be evaluated safely.",
+          "observed_value": null
+        }
+      ],
+      "confidence": "low",
+      "protection": {
+        "eligibility": "unavailable",
+        "reason_code": "metadata_unreadable",
+        "explanation": "Unavailable metadata prevents selection or cleanup."
+      },
+      "is_regular_file": false,
+      "is_reparse_point": false
+    }
+  ],
+  "inaccessible_paths": [
+    {
+      "path": "C:\\Users\\fictional.avery\\PrivateArchive\\locked-fragment.tmp",
+      "scan_root": "C:\\Users\\fictional.avery",
+      "error_type": "unreadable_metadata",
+      "message": "The fictional path exists, but its metadata could not be read.",
+      "occurred_at_utc": "2026-07-23T08:45:06Z"
+    }
+  ],
+  "scan_errors": [
+    {
+      "code": "metadata_unreadable",
+      "scope": "file",
+      "path": "C:\\Users\\fictional.avery\\PrivateArchive\\locked-fragment.tmp",
+      "message": "One fictional file could not be inspected; the remaining scan continued.",
+      "recoverable": true,
+      "occurred_at_utc": "2026-07-23T08:45:06Z"
+    }
+  ],
+  "limitations": [
+    "The scan is partial because one fictional path was unreadable.",
+    "Unavailable candidates cannot be selected for cleanup.",
+    "Category totals remain estimates and must not be presented as exhaustive."
+  ]
+}

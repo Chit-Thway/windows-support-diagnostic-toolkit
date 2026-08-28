@@ -153,7 +153,9 @@
 
                 <div class="disk-list">
                     {% for disk in dashboard.disks %}
-                        <article class="panel metric-card status-panel status-{{ disk.status_class }}">
+                        <a class="panel metric-card disk-card status-panel status-{{ disk.status_class }}"
+                           href="{{ url_for('storage_drive', drive=disk.drive) }}"
+                           aria-label="Open storage insights for {{ disk.drive }} drive">
                             <div class="card-heading">
                                 <div>
                                     <p class="eyebrow">Fixed disk</p>
@@ -173,7 +175,8 @@
                                 <div><dt>Free</dt><dd>{{ disk.free_gb }} GB</dd></div>
                                 <div><dt>Free</dt><dd>{{ disk.percent_free }}%</dd></div>
                             </dl>
-                        </article>
+                            <span class="disk-card-action" aria-hidden="true">Open storage insights →</span>
+                        </a>
                     {% else %}
                         <div class="panel empty-state">
                             <h3>No disk records</h3>

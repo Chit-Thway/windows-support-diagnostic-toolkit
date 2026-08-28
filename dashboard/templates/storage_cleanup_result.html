@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Guided cleanup results</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='storage.css') }}">
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to cleanup results</a>
+    <header class="site-header storage-header">
+        <div class="shell header-layout">
+            <div><p class="eyebrow">Guided cleanup · results</p><h1>Recycle Bin action finished</h1><p class="header-copy">Every requested item has an individual outcome below.</p></div>
+            <dl class="report-meta"><div><dt>Drive</dt><dd>{{ drive }}</dd></div><div><dt>Requested</dt><dd>{{ record.requested_count }} items</dd></div><div><dt>Reviewed size</dt><dd>{{ requested_size }}</dd></div></dl>
+        </div>
+    </header>
+
+    <main id="main-content" class="shell cleanup-page">
+        <nav class="back-nav" aria-label="Storage navigation"><a href="{{ cleanup_return_url }}">← Return to review</a></nav>
+        <section class="panel cleanup-results" aria-labelledby="result-summary-heading">
+            <h2 id="result-summary-heading">Outcome summary</h2>
+            <dl class="cleanup-result-counts">
+                <div><dt>Recycled</dt><dd>{{ record.summary.recycled }}</dd></div>
+                <div><dt>Changed and skipped</dt><dd>{{ record.summary.skipped_changed }}</dd></div>
+                <div><dt>Protected or invalid</dt><dd>{{ record.summary.skipped_protected_or_invalid }}</dd></div>
+                <div><dt>Missing</dt><dd>{{ record.summary.missing }}</dd></div>
+                <div><dt>Failed safely</dt><dd>{{ record.summary.failed }}</dd></div>
+            </dl>
+            {% if record_path %}<p class="cleanup-record-note">A machine-local result record was saved as <strong>{{ record_path.name }}</strong> under the ignored cleanup-records directory.</p>{% endif %}
+            {% if record_error %}<p class="support-note"><strong>Record warning:</strong> {{ record_error }}</p>{% endif %}
+        </section>
+
+        <section aria-labelledby="results-heading">
+            <div class="section-heading"><div><p class="eyebrow">Per-item audit</p><h2 id="results-heading">Detailed results</h2></div></div>
+            <ol class="cleanup-result-list">
+                {% for result in record.results %}
+                    <li class="panel status-panel cleanup-result status-{{ result.status }}">
+                        <div class="cleanup-result-heading"><h3>{{ result.path }}</h3><span class="status-badge status-unavailable">{{ result.status | replace('_', ' ') | title }}</span></div>
+                        <p>{{ result.message }}</p>
+                    </li>
+                {% endfor %}
+            </ol>
+        </section>
+
+        <section class="panel cleanup-warning"><h2>Recovery reminder</h2><p>Items reported as recycled are now managed by Windows. Check the Recycle Bin promptly if you need to restore one. No permanent-delete fallback was used.</p></section>
+    </main>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>File-Type Explorer index required</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='storage.css') }}">
+</head>
+<body class="error-page">
+    <main class="error-card">
+        <p class="eyebrow">{{ drive }} · File-Type Explorer</p>
+        <h1>Create a local file-type index first</h1>
+        <p>This cleanup method never starts a drive scan automatically. Create the metadata-only index explicitly, then restart the dashboard with that local file.</p>
+        {% if selected_file_type_index_path is defined %}<p>The configured file was not found: <code>{{ selected_file_type_index_path }}</code></p>{% endif %}
+        <h2>Safe local steps</h2>
+        <ol class="instruction-list">
+            <li>Run <code>python -m storage.file_type_indexer --drive '{{ drive }}\'</code></li>
+            <li>Restart with <code>python -m dashboard --report "YOUR-REPORT.json" --file-type-index ".\storage-reports\file-type-index-{{ drive[0] | lower }}.json"</code></li>
+            <li>Open this cleanup method again from the {{ drive }} storage page.</li>
+        </ol>
+        <p class="support-note">The index stays local, contains metadata only, and is ignored by Git.</p>
+        <a href="{{ url_for('storage_drive', drive=drive) }}">← Return to {{ drive }} storage insights</a>
+    </main>
+</body>
+</html>

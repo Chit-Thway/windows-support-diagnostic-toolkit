@@ -1,0 +1,177 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at_utc": "2026-08-09T08:35:24Z",
+  "collector": {
+    "name": "Windows Support Diagnostic Toolkit",
+    "version": "0.1.0",
+    "script_name": "Collect-Diagnostics.ps1",
+    "powershell_version": "5.1.26100.4652"
+  },
+  "collection_summary": {
+    "started_at_utc": "2026-08-09T08:35:19Z",
+    "completed_at_utc": "2026-08-09T08:35:24Z",
+    "duration_ms": 4982,
+    "status": "complete",
+    "sections": {
+      "system": "success",
+      "resources": "success",
+      "network": "success",
+      "services": "success",
+      "events": "success"
+    }
+  },
+  "system": {
+    "hostname": "HAVIK-DESKTOP",
+    "signed_in_username": "PORTFOLIO\\chris.havik",
+    "windows_edition": "Microsoft Windows 11 Home",
+    "windows_version": "10.0.26200",
+    "windows_build": "26200",
+    "os_architecture": "64-bit",
+    "manufacturer": "Northwind Systems",
+    "model": "Atlas R5 Workstation",
+    "processor_name": "AMD Ryzen 5 5500 6-Core Processor",
+    "logical_processor_count": 12,
+    "last_boot_time_utc": "2026-08-07T22:52:10Z",
+    "uptime_seconds": 121994
+  },
+  "resources": {
+    "memory": {
+      "observed_at_utc": "2026-08-09T08:35:20Z",
+      "total_gb": 15.87,
+      "available_gb": 2.79,
+      "used_gb": 13.08,
+      "percent_used": 82.42
+    },
+    "disks": [
+      {
+        "drive": "C:",
+        "total_gb": 463.77,
+        "free_gb": 8.74,
+        "percent_free": 1.88
+      },
+      {
+        "drive": "F:",
+        "total_gb": 929.87,
+        "free_gb": 374.26,
+        "percent_free": 40.25
+      }
+    ]
+  },
+  "network": {
+    "adapters": [
+      {
+        "name": "Ethernet",
+        "status": "Connected",
+        "ipv4_addresses": [
+          "192.0.2.84"
+        ],
+        "default_gateways": [
+          "192.0.2.1"
+        ],
+        "dns_servers": [
+          "192.0.2.53"
+        ]
+      },
+      {
+        "name": "Virtual Ethernet Adapter",
+        "status": "Connected",
+        "ipv4_addresses": [
+          "198.51.100.20"
+        ],
+        "default_gateways": [],
+        "dns_servers": []
+      }
+    ]
+  },
+  "services": [
+    {
+      "service_name": "EventLog",
+      "display_name": "Windows Event Log",
+      "availability": "available",
+      "current_state": "Running",
+      "startup_mode": "Automatic"
+    },
+    {
+      "service_name": "Winmgmt",
+      "display_name": "Windows Management Instrumentation",
+      "availability": "available",
+      "current_state": "Running",
+      "startup_mode": "Automatic"
+    },
+    {
+      "service_name": "BFE",
+      "display_name": "Base Filtering Engine",
+      "availability": "available",
+      "current_state": "Running",
+      "startup_mode": "Automatic"
+    },
+    {
+      "service_name": "Dhcp",
+      "display_name": "DHCP Client",
+      "availability": "available",
+      "current_state": "Running",
+      "startup_mode": "Automatic"
+    },
+    {
+      "service_name": "Dnscache",
+      "display_name": "DNS Client",
+      "availability": "available",
+      "current_state": "Running",
+      "startup_mode": "Automatic"
+    },
+    {
+      "service_name": "NlaSvc",
+      "display_name": "Network Location Awareness",
+      "availability": "available",
+      "current_state": "Stopped",
+      "startup_mode": "Manual"
+    }
+  ],
+  "events": {
+    "lookback_hours": 24,
+    "maximum_events_per_log": 10,
+    "items": [
+      {
+        "log_name": "System",
+        "event_id": 41,
+        "provider_name": "Microsoft-Windows-Kernel-Power",
+        "level": "Critical",
+        "time_created_utc": "2026-08-09T08:04:28Z",
+        "message": "The fictional HAVIK-DESKTOP system restarted without completing a clean shutdown. This synthetic event is provided for the portfolio demonstration."
+      },
+      {
+        "log_name": "Application",
+        "event_id": 78,
+        "provider_name": "SideBySide",
+        "level": "Error",
+        "time_created_utc": "2026-08-09T07:48:12Z",
+        "message": "Activation context generation failed for fictional application C:\\Program Files\\Northwind Tools\\SupportDesk.exe. A required side-by-side dependency could not be resolved."
+      },
+      {
+        "log_name": "Application",
+        "event_id": 1000,
+        "provider_name": "Application Error",
+        "level": "Error",
+        "time_created_utc": "2026-08-09T06:22:41Z",
+        "message": "Faulting application name: InventoryClient.exe. Faulting module name: Northwind.UI.dll. This is fictional portfolio data."
+      },
+      {
+        "log_name": "Application",
+        "event_id": 1026,
+        "provider_name": ".NET Runtime",
+        "level": "Error",
+        "time_created_utc": "2026-08-09T06:22:39Z",
+        "message": "Fictional process InventoryClient.exe terminated because of an unhandled application exception."
+      },
+      {
+        "log_name": "System",
+        "event_id": 10010,
+        "provider_name": "Microsoft-Windows-DistributedCOM",
+        "level": "Error",
+        "time_created_utc": "2026-08-09T03:16:05Z",
+        "message": "The fictional Northwind.BackgroundAgent component did not register with DCOM within the required timeout."
+      }
+    ]
+  },
+  "collection_errors": []
+}
