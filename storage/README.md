@@ -75,8 +75,12 @@ python -m dashboard `
 Repeat `--file-type-index` for additional drives. Open the matching disk card,
 then choose **Cleanup methods → File-Type Explorer**. Group or exact-extension
 filters update stored folder aggregates without another scan. The tree is
-read-only in this milestone: it selects non-overlapping folder review scopes
-but does not yet list matching files or enable Recycle Bin actions.
+read-only and selects non-overlapping folder review scopes. The matching-file
+panel queries only retained index metadata and supports direct-folder or
+recursive scope, filename/size/age filters, deterministic sorting, pagination,
+individual and shift-range selection, and `Select all visible`. Bounded indexes
+disclose omitted file rows rather than pretending those paths are selectable.
+Recycle Bin actions remain disabled until the final V2 milestone.
 
 ## Requirements
 

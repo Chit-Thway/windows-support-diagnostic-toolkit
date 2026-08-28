@@ -1131,6 +1131,196 @@
     text-align: center;
 }
 
+.file-review-controls {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 1rem;
+    align-items: end;
+    margin-bottom: 1rem;
+}
+
+.file-review-controls label,
+.file-review-controls fieldset {
+    display: grid;
+    gap: 0.45rem;
+    min-width: 0;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.file-review-controls fieldset {
+    align-content: center;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.file-review-controls fieldset label {
+    display: flex;
+    align-items: center;
+    color: var(--ink);
+    font-size: 0.83rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.file-review-controls input[type="search"],
+.file-review-controls input[type="number"],
+.file-review-controls select {
+    width: 100%;
+    min-height: 2.55rem;
+    padding: 0.55rem 0.65rem;
+    color: var(--ink);
+    border: 1px solid #afbed0;
+    border-radius: 8px;
+    background: #fff;
+    font: inherit;
+    font-size: 0.92rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.file-review-summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.file-review-summary > div:not(.file-review-actions) {
+    display: grid;
+    gap: 0.2rem;
+}
+
+.file-review-summary span {
+    color: var(--muted);
+    font-size: 0.84rem;
+}
+
+.file-review-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    justify-content: flex-end;
+}
+
+.file-review-message,
+.bounded-detail-warning {
+    margin-bottom: 1rem;
+    color: var(--muted);
+}
+
+.file-review-message.is-error,
+.bounded-detail-warning {
+    color: #7a3d00;
+    border-left: 4px solid var(--warning);
+}
+
+.file-review-table-wrap {
+    margin-bottom: 1rem;
+    padding: 0;
+    overflow-x: auto;
+}
+
+.file-review-table {
+    width: 100%;
+    min-width: 900px;
+    border-collapse: collapse;
+}
+
+.file-review-table th,
+.file-review-table td {
+    padding: 0.85rem 0.75rem;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+}
+
+.file-review-table th {
+    color: var(--muted);
+    background: #f7f9fc;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.file-review-table td:first-child,
+.file-review-table th:first-child {
+    width: 2.5rem;
+    text-align: center;
+}
+
+.file-review-table td:nth-child(3),
+.file-review-table td:nth-child(4),
+.file-review-table td:nth-child(5) {
+    white-space: nowrap;
+}
+
+.file-review-table td:nth-child(2),
+.file-review-table td:nth-child(6) {
+    min-width: 220px;
+}
+
+.file-review-table td:nth-child(2),
+.file-review-table td:nth-child(6),
+.selected-file-panel li > div {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.file-path {
+    overflow-wrap: anywhere;
+}
+
+.file-review-pagination {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1rem;
+}
+
+.file-review-pagination > div {
+    display: flex;
+    gap: 0.55rem;
+}
+
+.selected-file-panel {
+    margin-bottom: 1rem;
+}
+
+.selected-file-panel summary {
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.selected-file-panel ul {
+    display: grid;
+    gap: 0.65rem;
+    margin-top: 0.9rem;
+}
+
+.selected-file-panel li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: #f8fafc;
+}
+
+.selected-file-panel .secondary-text {
+    overflow-wrap: anywhere;
+}
+
 @media (max-width: 850px) {
     .storage-overview,
     .storage-chart-layout,
@@ -1176,6 +1366,19 @@
 
     .selected-scope-panel {
         position: static;
+    }
+
+    .file-review-controls {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .file-review-summary {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .file-review-actions {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
     }
 }
 
@@ -1238,5 +1441,15 @@
 
     .selected-scope-item {
         grid-template-columns: 1fr auto;
+    }
+
+    .file-review-controls,
+    .file-review-summary,
+    .selected-file-panel li {
+        grid-template-columns: 1fr;
+    }
+
+    .file-review-actions {
+        grid-column: auto;
     }
 }
