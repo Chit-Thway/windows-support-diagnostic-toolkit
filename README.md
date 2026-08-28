@@ -26,6 +26,8 @@ device, user, network, or event information._
   report versions without stopping the whole workflow.
 - Uses synthetic fixtures and automated boundary tests to protect real
   machine-specific diagnostic information.
+- Extends the support workflow with local storage accounting, ranked folder
+  review, plain-English file-type guidance, and guarded Recycle Bin cleanup.
 
 ## What the toolkit shows
 
@@ -270,28 +272,33 @@ Additional local safeguards:
 - Responses disable caching, framing, referrer data, MIME sniffing, and
   unnecessary browser permissions.
 
-## Storage extension development
+## Storage extension
 
-The optional **Storage Insights and Guided Cleanup** extension is developed
-milestone by milestone on the `storage-extension` integration branch. Its
-public roadmap is in
-[`STORAGE_EXTENSION_PLAN.md`](STORAGE_EXTENSION_PLAN.md).
+The completed **Storage Insights and Guided Cleanup** extension turns a disk
+space warning into a structured, local review workflow. Its public roadmap in
+[`STORAGE_EXTENSION_PLAN.md`](STORAGE_EXTENSION_PLAN.md) records the milestone
+branches, contracts, safety decisions, and testing approach used to build it.
 
-Milestone 1 defines an independent storage-analysis contract and synthetic
-fixtures. Milestone 2 adds a separately invoked, read-only metadata scanner.
-Milestone 3 connects disk cards to an accessible per-drive dashboard with a
-non-overlapping storage chart and scan completeness. Milestone 4 adds a
-read-only candidate explorer with deterministic filtering, sorting,
-visible-only selection, copy-path, open-folder, and local review-plan export.
-Milestone 5 adds a guarded exact-path review and Recycle Bin-only confirmation
-with per-file revalidation and results. Milestone 6 adds informational Python
-environment, supported pip-cache, and Java runtime insights without making
-runtimes automatic cleanup candidates. Milestone 7 hardens whole-drive
-accounting and failure paths. Milestone 8 adds folder-tree aggregation, a
-Files/Folders explorer switch, and conservative folder cleanup safeguards while
-preserving the existing file workflow. See
-[`docs/storage-report-contract.md`](docs/storage-report-contract.md) and
-[`docs/development-storage-insights.md`](docs/development-storage-insights.md).
+The extension adds:
+
+- an explicitly started, metadata-only storage scanner and versioned JSON
+  contracts;
+- per-drive capacity, scan-completeness, and non-overlapping storage views;
+- file and folder candidate explorers with deterministic filters and sorting;
+- a whole-drive File-Type Explorer index that can change filters without
+  rescanning;
+- grouped document, video, audio, image, archive, and installer filters, with a
+  `?` guide explaining 37 common extensions in plain English;
+- ranked folder totals that change to match the selected file types;
+- non-overlapping folder scopes and exact matching-file review; and
+- immediate path revalidation followed by Recycle Bin-only cleanup for
+  explicitly confirmed eligible files.
+
+See [`docs/storage-report-contract.md`](docs/storage-report-contract.md),
+[`docs/file-type-index-contract.md`](docs/file-type-index-contract.md),
+[`docs/guided-cleanup.md`](docs/guided-cleanup.md), and
+[`docs/development-storage-insights.md`](docs/development-storage-insights.md)
+for the public contracts and safety model.
 
 The V2 File-Type Explorer uses a separate versioned per-drive index for ranked
 folder totals and extension-aware review. Its contract, fictional sample, and

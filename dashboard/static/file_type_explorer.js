@@ -787,6 +787,9 @@
         const extensionToggles = Array.from(
             group.querySelectorAll("[data-extension-toggle]")
         );
+        const helpButton = group.querySelector("[data-extension-help-button]");
+        const helpDialog = group.querySelector("[data-extension-help-dialog]");
+        const helpCloseButton = group.querySelector("[data-extension-help-close]");
         const settingsButton = group.querySelector("[data-extension-settings-button]");
         const settings = group.querySelector("[data-extension-settings]");
 
@@ -820,6 +823,17 @@
             const expanded = settingsButton.getAttribute("aria-expanded") === "true";
             settingsButton.setAttribute("aria-expanded", String(!expanded));
             settings.hidden = expanded;
+        });
+        helpButton.addEventListener("click", () => {
+            helpDialog.showModal();
+        });
+        helpCloseButton.addEventListener("click", () => {
+            helpDialog.close();
+        });
+        helpDialog.addEventListener("click", (event) => {
+            if (event.target === helpDialog) {
+                helpDialog.close();
+            }
         });
         updateGroupState();
     });

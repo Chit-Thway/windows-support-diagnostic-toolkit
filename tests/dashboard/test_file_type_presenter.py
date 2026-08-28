@@ -31,6 +31,10 @@ def test_presenter_exposes_group_controls_without_file_rows() -> None:
         "Videos",
         "Audio",
     ]
+    documents = view["extension_groups"][0]
+    assert documents["help_items"][0]["extension"] == ".pdf"
+    assert documents["help_items"][0]["icon"] == "PDF"
+    assert "Portable Document Format" in documents["help_items"][0]["name"]
     assert view["custom_extension_count"] == 1
 
 

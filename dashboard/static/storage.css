@@ -188,6 +188,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 1.5rem;
+    padding: 1.25rem 1.4rem;
 }
 
 .candidate-mode-switch {
@@ -866,6 +867,12 @@
     justify-content: space-between;
 }
 
+.extension-group-actions {
+    display: flex;
+    gap: 0.45rem;
+    align-items: center;
+}
+
 .extension-group-toggle {
     font-size: 1.05rem;
     font-weight: 800;
@@ -878,7 +885,7 @@
     accent-color: var(--accent-deep);
 }
 
-.extension-settings-button {
+.extension-icon-button {
     display: grid;
     width: 2.25rem;
     height: 2.25rem;
@@ -890,13 +897,13 @@
     cursor: pointer;
 }
 
-.extension-settings-button:hover,
-.extension-settings-button:focus-visible {
+.extension-icon-button:hover,
+.extension-icon-button:focus-visible {
     color: #fff;
     background: var(--accent-deep);
 }
 
-.extension-settings-button:focus-visible,
+.extension-icon-button:focus-visible,
 .folder-name-button:focus-visible,
 .tree-expand-button:focus-visible,
 [data-folder-scope]:focus-visible {
@@ -936,6 +943,151 @@
     font-family: Consolas, monospace;
     font-size: 0.8rem;
 }
+
+.extension-help-dialog {
+    position: fixed;
+    inset: 0;
+    width: min(880px, calc(100vw - 2rem));
+    max-width: none;
+    max-height: min(82vh, 760px);
+    margin: auto;
+    padding: 0;
+    overflow: hidden;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: 0 24px 70px rgba(7, 28, 58, 0.3);
+}
+
+.extension-help-dialog::backdrop {
+    background: rgba(7, 22, 42, 0.58);
+    backdrop-filter: blur(2px);
+}
+
+.extension-help-layout {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    max-height: min(82vh, 760px);
+}
+
+.extension-help-header {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.3rem 1.4rem 1rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.extension-help-header h2,
+.extension-help-header .eyebrow,
+.extension-help-row p:last-child {
+    margin-bottom: 0;
+}
+
+.extension-help-close {
+    display: grid;
+    flex: 0 0 auto;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    color: var(--ink);
+    border: 1px solid #b7c7db;
+    border-radius: 50%;
+    background: #fff;
+    font: inherit;
+    font-size: 1.45rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.extension-help-close:hover,
+.extension-help-close:focus-visible {
+    color: #fff;
+    background: var(--accent-deep);
+}
+
+.extension-help-close:focus-visible {
+    outline: 3px solid #ffbf47;
+    outline-offset: 2px;
+}
+
+.extension-help-intro {
+    margin: 0;
+    padding: 1rem 1.4rem;
+    color: var(--muted);
+    background: #f6f8fb;
+    border-bottom: 1px solid var(--line);
+}
+
+.extension-help-list {
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.extension-help-row {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+    padding: 1.15rem 1.4rem;
+}
+
+.extension-help-row:nth-child(even) {
+    background: #f3f5f8;
+}
+
+.extension-help-row h3 {
+    margin: 0 0 0.45rem;
+}
+
+.extension-help-row p {
+    margin: 0 0 0.6rem;
+    color: #35445a;
+    line-height: 1.55;
+}
+
+.extension-help-example {
+    padding: 0.55rem 0.7rem;
+    border-left: 3px solid #afbed0;
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.extension-file-icon {
+    position: relative;
+    display: grid;
+    width: 3.15rem;
+    height: 3.6rem;
+    place-items: end center;
+    padding: 0.35rem 0.2rem 0.55rem;
+    overflow: hidden;
+    color: #fff;
+    border-radius: 6px 11px 6px 6px;
+    background: #2b63b6;
+    box-shadow: 0 5px 12px rgba(16, 49, 89, 0.18);
+    font-size: 0.64rem;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+}
+
+.extension-file-icon::before {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0.85rem;
+    height: 0.85rem;
+    content: "";
+    border-bottom-left-radius: 4px;
+    background: rgba(255, 255, 255, 0.78);
+}
+
+.extension-file-icon-videos { background: #7052b8; }
+.extension-file-icon-audio { background: #a33d78; }
+.extension-file-icon-images { background: #16866d; }
+.extension-file-icon-archives_disk_images { background: #bd681a; }
+.extension-file-icon-installers { background: #b63d3d; }
+.extension-file-icon-custom_indexed { background: #657386; }
 
 .tree-value-heading {
     align-items: flex-end;
@@ -1137,6 +1289,7 @@
     gap: 1rem;
     align-items: end;
     margin-bottom: 1rem;
+    padding: 1.1rem 1.2rem;
 }
 
 .file-review-controls label,
@@ -1191,6 +1344,7 @@
     gap: 1rem;
     align-items: center;
     margin-bottom: 1rem;
+    padding: 0.95rem 1.1rem;
 }
 
 .file-review-summary > div:not(.file-review-actions) {
@@ -1213,6 +1367,7 @@
 .file-review-message,
 .bounded-detail-warning {
     margin-bottom: 1rem;
+    padding: 0.85rem 1rem;
     color: var(--muted);
 }
 
@@ -1293,6 +1448,7 @@
 
 .selected-file-panel {
     margin-bottom: 1rem;
+    padding: 0.9rem 1rem;
 }
 
 .selected-file-panel summary {
@@ -1451,5 +1607,31 @@
 
     .file-review-actions {
         grid-column: auto;
+    }
+
+    .extension-help-dialog {
+        width: calc(100vw - 1rem);
+        max-height: calc(100vh - 1rem);
+    }
+
+    .extension-help-layout {
+        max-height: calc(100vh - 1rem);
+    }
+
+    .extension-help-header,
+    .extension-help-intro,
+    .extension-help-row {
+        padding-right: 1rem;
+        padding-left: 1rem;
+    }
+
+    .extension-help-row {
+        grid-template-columns: 2.8rem minmax(0, 1fr);
+    }
+
+    .extension-file-icon {
+        width: 2.6rem;
+        height: 3rem;
+        font-size: 0.57rem;
     }
 }

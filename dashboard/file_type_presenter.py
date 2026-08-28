@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from .extension_help import extension_help
 from .file_type_index_loader import FileTypeIndexSnapshot
 from .storage_presenter import format_bytes
 
@@ -97,6 +98,9 @@ def present_file_type_index(
             "group_id": group["group_id"],
             "label": group["label"],
             "extensions": group["extensions"],
+            "help_items": [
+                extension_help(extension) for extension in group["extensions"]
+            ],
         }
         for group in report["extension_groups"]
     ]
@@ -106,6 +110,10 @@ def present_file_type_index(
                 "group_id": "custom_indexed",
                 "label": "Custom indexed extensions",
                 "extensions": report["custom_extensions"],
+                "help_items": [
+                    extension_help(extension)
+                    for extension in report["custom_extensions"]
+                ],
             }
         )
 

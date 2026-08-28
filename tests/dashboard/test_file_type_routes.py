@@ -54,6 +54,11 @@ def test_file_type_explorer_renders_groups_and_root_only() -> None:
     assert "Select all visible" in body
     assert "Review Recycle Bin action" in body
     assert "never uses permanent deletion" in body
+    assert "Explain Documents file types" in body
+    assert 'id="extension-help-documents"' in body
+    assert "Portable Document Format" in body
+    assert "Modern Windows application package" in body
+    assert "A Zoom, Java, or workplace application installation package" in body
 
 
 def test_folder_children_endpoint_returns_one_ranked_level() -> None:
@@ -203,6 +208,8 @@ def test_dynamic_tree_script_uses_text_content_not_html_insertion() -> None:
     assert "innerHTML" not in source
     assert "insertAdjacentHTML" not in source
     assert "fetch(" in source
+    assert ".showModal()" in source
+    assert ".close()" in source
 
 
 def test_report_controlled_folder_text_is_html_escaped(tmp_path: Path) -> None:

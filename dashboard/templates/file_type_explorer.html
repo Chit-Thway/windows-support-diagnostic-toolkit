@@ -86,14 +86,24 @@
                                 <input type="checkbox" data-group-toggle value="{{ group.group_id }}">
                                 <span>{{ group.label }}</span>
                             </label>
-                            <button type="button"
-                                    class="extension-settings-button"
-                                    data-extension-settings-button
-                                    aria-expanded="false"
-                                    aria-controls="extension-settings-{{ group.group_id }}">
-                                <span aria-hidden="true">⚙</span>
-                                <span class="visually-hidden">Configure {{ group.label }} extensions</span>
-                            </button>
+                            <div class="extension-group-actions">
+                                <button type="button"
+                                        class="extension-icon-button"
+                                        data-extension-help-button
+                                        aria-haspopup="dialog"
+                                        aria-controls="extension-help-{{ group.group_id }}">
+                                    <span aria-hidden="true">?</span>
+                                    <span class="visually-hidden">Explain {{ group.label }} file types</span>
+                                </button>
+                                <button type="button"
+                                        class="extension-icon-button"
+                                        data-extension-settings-button
+                                        aria-expanded="false"
+                                        aria-controls="extension-settings-{{ group.group_id }}">
+                                    <span aria-hidden="true">⚙</span>
+                                    <span class="visually-hidden">Configure {{ group.label }} extensions</span>
+                                </button>
+                            </div>
                         </div>
                         <p class="extension-summary">{{ group.extensions | join(', ') }}</p>
                         <div id="extension-settings-{{ group.group_id }}"
@@ -104,6 +114,38 @@
                                 <label><input type="checkbox" data-extension-toggle value="{{ extension }}" checked> {{ extension }}</label>
                             {% endfor %}
                         </div>
+                        <dialog id="extension-help-{{ group.group_id }}"
+                                class="extension-help-dialog"
+                                data-extension-help-dialog
+                                aria-labelledby="extension-help-title-{{ group.group_id }}">
+                            <div class="extension-help-layout">
+                                <header class="extension-help-header">
+                                    <div>
+                                        <p class="eyebrow">File-type guide</p>
+                                        <h2 id="extension-help-title-{{ group.group_id }}">{{ group.label }}</h2>
+                                    </div>
+                                    <button type="button"
+                                            class="extension-help-close"
+                                            data-extension-help-close
+                                            aria-label="Close {{ group.label }} file-type guide">×</button>
+                                </header>
+                                <p class="extension-help-intro">These extensions organise the local index for human review. A matching type describes how a file is normally used; it does not prove that the file is disposable.</p>
+                                <div class="extension-help-list">
+                                    {% for item in group.help_items %}
+                                        <article class="extension-help-row">
+                                            <span class="extension-file-icon extension-file-icon-{{ group.group_id }}" aria-hidden="true">
+                                                <span>{{ item.icon }}</span>
+                                            </span>
+                                            <div>
+                                                <h3><code>{{ item.extension }}</code> — {{ item.name }}</h3>
+                                                <p>{{ item.description }}</p>
+                                                <p class="extension-help-example"><strong>Example:</strong> {{ item.example }}</p>
+                                            </div>
+                                        </article>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </dialog>
                     </fieldset>
                 {% endfor %}
             </div>
