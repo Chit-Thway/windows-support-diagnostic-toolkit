@@ -113,4 +113,3 @@ def test_even_one_folder_requires_typed_confirmation(tmp_path) -> None:
     assert preview.candidate_kind == "folder"
     assert preview.requires_additional_confirmation is True
     assert preview.confirmation_phrase == "RECYCLE 1 FOLDER"
-
