@@ -485,6 +485,9 @@
     const nextPageButton = explorer.querySelector("[data-next-page]");
     const pageSummary = explorer.querySelector("[data-page-summary]");
     const boundedDetailWarning = explorer.querySelector("[data-bounded-detail-warning]");
+    const cleanupForm = explorer.querySelector("[data-file-cleanup-form]");
+    const cleanupInputs = explorer.querySelector("[data-cleanup-file-inputs]");
+    const reviewCleanupButton = explorer.querySelector("[data-review-cleanup]");
     let currentReviewPage = 1;
     let currentPageFiles = [];
     let lastSelectedVisibleIndex = null;
@@ -502,6 +505,15 @@
         selectedFileCount.textContent = `${files.length.toLocaleString()} selected`;
         selectedFileSize.textContent = `${formatBytes(bytes)} logical selected`;
         clearFileSelectionButton.disabled = files.length === 0;
+        reviewCleanupButton.disabled = files.length === 0;
+        cleanupInputs.replaceChildren();
+        files.forEach((file) => {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = "file_id";
+            input.value = file.file_id;
+            cleanupInputs.append(input);
+        });
         noSelectedFiles.hidden = files.length > 0;
         selectedFileList.querySelectorAll("[data-selected-file]").forEach(
             (item) => item.remove()
@@ -763,6 +775,11 @@
         selectedFiles.clear();
         renderFileRows(currentPageFiles);
         updateSelectedFileSummary();
+    });
+    cleanupForm.addEventListener("submit", (event) => {
+        if (selectedFiles.size === 0) {
+            event.preventDefault();
+        }
     });
 
     extensionGroups().forEach((group) => {

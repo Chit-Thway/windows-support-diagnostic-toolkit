@@ -38,6 +38,7 @@ class CleanupPreview:
     total_bytes: int
     requires_additional_confirmation: bool
     confirmation_phrase: str | None
+    source_kind: str
 
 
 class CleanupPreviewStore:
@@ -73,7 +74,10 @@ class CleanupPreviewStore:
         storage_report_path: str | Path,
         source_generated_at_utc: str,
         candidates: Iterable[dict[str, Any]],
+        source_kind: str = "storage_report",
     ) -> CleanupPreview:
+        if source_kind not in {"storage_report", "file_type_index"}:
+            raise CleanupPreviewError("The cleanup preview source is not supported.")
         selected = tuple(copy.deepcopy(tuple(candidates)))
         kinds = {candidate.get("item_type", "file") for candidate in selected}
         if len(kinds) != 1 or not kinds.issubset({"file", "folder"}):
@@ -115,6 +119,7 @@ class CleanupPreviewStore:
             total_bytes=total_bytes,
             requires_additional_confirmation=high_risk,
             confirmation_phrase=phrase,
+            source_kind=source_kind,
         )
         with self._lock:
             self._purge_expired(now)

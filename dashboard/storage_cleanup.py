@@ -138,6 +138,7 @@ def register_storage_cleanup_routes(app: Flask) -> None:
             storage_report_path=report_path,
             source_generated_at_utc=report["generated_at_utc"],
             candidates=selected,
+            source_kind="storage_report",
         )
         presented = present_storage_report(report, diagnostic_status="Unavailable")
         presented_candidates = (
@@ -158,6 +159,8 @@ def register_storage_cleanup_routes(app: Flask) -> None:
             candidates=preview_candidates,
             total_size=format_bytes(preview.total_bytes),
             storage_action_token=app.config["STORAGE_ACTION_TOKEN"],
+            cleanup_confirm_url=f"/storage/{drive}/cleanup/confirm",
+            cleanup_return_url=f"/storage/{drive}",
         )
 
     @app.post("/storage/<drive>/cleanup/confirm")
@@ -181,6 +184,12 @@ def register_storage_cleanup_routes(app: Flask) -> None:
             return _error_response(
                 "Cleanup confirmation rejected",
                 "The confirmation does not belong to this drive.",
+                409,
+            )
+        if preview.source_kind != "storage_report":
+            return _error_response(
+                "Cleanup confirmation rejected",
+                "The confirmation belongs to a different cleanup workflow.",
                 409,
             )
         if request.form.get("confirm_cleanup") != "yes":
@@ -259,4 +268,5 @@ def register_storage_cleanup_routes(app: Flask) -> None:
             record_path=record_path,
             record_error=record_error,
             requested_size=format_bytes(record["requested_unique_bytes"]),
+            cleanup_return_url=f"/storage/{drive}",
         )

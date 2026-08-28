@@ -80,7 +80,12 @@ panel queries only retained index metadata and supports direct-folder or
 recursive scope, filename/size/age filters, deterministic sorting, pagination,
 individual and shift-range selection, and `Select all visible`. Bounded indexes
 disclose omitted file rows rather than pretending those paths are selectable.
-Recycle Bin actions remain disabled until the final V2 milestone.
+Selecting a file changes nothing. **Review Recycle Bin action** creates a
+separate exact-path preview. Only after another explicit confirmation does the
+toolkit recheck the file's drive, approved scope, type, size, modification time,
+reparse-point state, protected-location policy, and current removal-risk policy.
+Eligible unchanged files are sent only to the Windows Recycle Bin. The toolkit
+never permanently deletes a file as a fallback.
 
 ## Requirements
 

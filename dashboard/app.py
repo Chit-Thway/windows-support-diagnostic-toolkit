@@ -15,6 +15,7 @@ from storage.cleanup import (
 
 from .cleanup_tokens import CleanupPreviewStore
 from .evaluator import evaluate_report
+from .file_type_cleanup import register_file_type_cleanup_routes
 from .file_type_index_loader import (
     FileTypeIndexLoadError,
     FileTypeIndexNotFoundError,
@@ -265,6 +266,7 @@ def create_app(
         return render_template(
             "file_type_explorer.html",
             explorer=present_file_type_index(snapshot),
+            storage_action_token=app.config["STORAGE_ACTION_TOKEN"],
         )
 
     @app.get("/storage/<drive>/file-types/folders")
@@ -388,5 +390,6 @@ def create_app(
         )
 
     register_storage_cleanup_routes(app)
+    register_file_type_cleanup_routes(app)
 
     return app
