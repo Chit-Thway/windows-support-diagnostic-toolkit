@@ -74,6 +74,22 @@ aggregates in the browser, so filter changes do not read the filesystem or
 start another scan. Scope selection accepts siblings and other non-overlapping
 folders but rejects a parent and descendant together.
 
+Matching-file review queries retained metadata only. Users can choose direct
+folder or include-subfolders scope; filter by indexed extension, filename,
+minimum logical size, and modification age; and sort by logical size,
+modification time, natural filename, or path. Results are returned in bounded
+pages so a large local index is not rendered as one browser document. Selection
+is explicit and can cover individual rows, a shift-range on the current page,
+or eligible rows visible on the current page only. Protected and review-only
+rows cannot enter the selected-path summary.
+
+Contract `1.0.0` guarantees unique file IDs and case-insensitive unique paths.
+The dashboard also deduplicates normalized paths defensively, while the
+non-overlapping scope rule prevents the same retained row from being returned
+through both a parent and descendant scope. This contract does not contain a
+stable physical file identity; physical hard-link deduplication therefore
+cannot be claimed for V2 indexes.
+
 ## Top-level structure
 
 ```json
@@ -219,6 +235,11 @@ The contract helper accepts multiple sibling or otherwise non-overlapping
 folder scopes on the active drive. It rejects duplicate scopes, paths on
 another drive, and a parent and descendant selected together. This prevents
 duplicate results and double-counted selected bytes.
+
+The dashboard preserves explicitly selected files when presentation filters or
+pages change, and always displays the complete selected-path and byte summary.
+Changing the folder scope or switching between direct and recursive depth
+clears file selection because the review boundary changed.
 
 ## Partial scans and structured errors
 

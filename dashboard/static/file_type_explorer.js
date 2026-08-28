@@ -7,6 +7,7 @@
     }
 
     const childrenUrl = explorer.dataset.childrenUrl;
+    const filesUrl = explorer.dataset.filesUrl;
     const tree = explorer.querySelector("[data-folder-tree]");
     const treeStatus = explorer.querySelector("[data-tree-status]");
     const breadcrumbs = explorer.querySelector("[data-folder-breadcrumbs]");
@@ -17,7 +18,10 @@
     const sizeHeading = explorer.querySelector("[data-size-heading]");
     const activeFilterLabel = explorer.querySelector("[data-active-filter]");
     const selectedScopes = new Map();
+    const selectedFiles = new Map();
     const pendingNameClicks = new WeakMap();
+    let requestReviewRefresh = () => {};
+    let clearSelectedFilesForScopeChange = () => {};
 
     const formatBytes = (value) => {
         const units = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"];
@@ -158,6 +162,8 @@
                     updateScopeCheckboxes();
                     renderSelectedScopes();
                     setScopeFeedback(`${record.path} was removed.`);
+                    clearSelectedFilesForScopeChange();
+                    requestReviewRefresh(true);
                 });
                 item.append(copy, value, remove);
                 scopeList.append(item);
@@ -171,6 +177,8 @@
             updateScopeCheckboxes();
             renderSelectedScopes();
             setScopeFeedback(`${record.path} was removed.`);
+            clearSelectedFilesForScopeChange();
+            requestReviewRefresh(true);
             return true;
         }
         if (node.dataset.scopeSelectable !== "true") {
@@ -197,6 +205,8 @@
         updateScopeCheckboxes();
         renderSelectedScopes();
         setScopeFeedback(`${record.path} was added for later file review.`);
+        clearSelectedFilesForScopeChange();
+        requestReviewRefresh(true);
         return true;
     };
 
@@ -264,6 +274,7 @@
             activeFilterLabel.textContent = `Matching ${Array.from(extensions).join(", ")}`;
         }
         renderSelectedScopes();
+        requestReviewRefresh(true);
     };
 
     const statusClass = (accessState) => {
@@ -457,6 +468,303 @@
         });
     }
 
+    const reviewSection = explorer.querySelector("[data-file-review]");
+    const reviewForm = explorer.querySelector("[data-file-review-form]");
+    const reviewMessage = explorer.querySelector("[data-file-review-message]");
+    const reviewResults = explorer.querySelector("[data-file-review-results]");
+    const reviewBody = explorer.querySelector("[data-file-review-body]");
+    const matchingCount = explorer.querySelector("[data-matching-count]");
+    const matchingSize = explorer.querySelector("[data-matching-size]");
+    const selectedFileCount = explorer.querySelector("[data-selected-file-count]");
+    const selectedFileSize = explorer.querySelector("[data-selected-file-size]");
+    const selectedFileList = explorer.querySelector("[data-selected-file-list]");
+    const noSelectedFiles = explorer.querySelector("[data-no-selected-files]");
+    const selectVisibleButton = explorer.querySelector("[data-select-visible]");
+    const clearFileSelectionButton = explorer.querySelector("[data-clear-file-selection]");
+    const previousPageButton = explorer.querySelector("[data-previous-page]");
+    const nextPageButton = explorer.querySelector("[data-next-page]");
+    const pageSummary = explorer.querySelector("[data-page-summary]");
+    const boundedDetailWarning = explorer.querySelector("[data-bounded-detail-warning]");
+    let currentReviewPage = 1;
+    let currentPageFiles = [];
+    let lastSelectedVisibleIndex = null;
+    let reviewRequestNumber = 0;
+    let reviewTimer = null;
+
+    const updateSelectedFileSummary = () => {
+        const files = Array.from(selectedFiles.values()).sort(
+            (left, right) => left.path.localeCompare(right.path, undefined, {
+                numeric: true,
+                sensitivity: "base",
+            })
+        );
+        const bytes = files.reduce((total, file) => total + file.size_bytes, 0);
+        selectedFileCount.textContent = `${files.length.toLocaleString()} selected`;
+        selectedFileSize.textContent = `${formatBytes(bytes)} logical selected`;
+        clearFileSelectionButton.disabled = files.length === 0;
+        noSelectedFiles.hidden = files.length > 0;
+        selectedFileList.querySelectorAll("[data-selected-file]").forEach(
+            (item) => item.remove()
+        );
+        files.forEach((file) => {
+            const item = document.createElement("li");
+            item.dataset.selectedFile = file.file_id;
+            const copy = document.createElement("div");
+            const name = document.createElement("strong");
+            name.textContent = file.name;
+            const path = document.createElement("span");
+            path.className = "secondary-text";
+            path.textContent = file.path;
+            copy.append(name, path);
+            const size = document.createElement("strong");
+            size.textContent = file.size;
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "text-button";
+            remove.textContent = "Remove";
+            remove.setAttribute("aria-label", `Remove ${file.path} from selected files`);
+            remove.addEventListener("click", () => {
+                selectedFiles.delete(file.file_id);
+                updateSelectedFileSummary();
+                renderFileRows(currentPageFiles);
+            });
+            item.append(copy, size, remove);
+            selectedFileList.append(item);
+        });
+    };
+
+    const setFileSelected = (file, selected) => {
+        if (!file.selectable) {
+            return;
+        }
+        if (selected) {
+            selectedFiles.set(file.file_id, file);
+        } else {
+            selectedFiles.delete(file.file_id);
+        }
+    };
+
+    clearSelectedFilesForScopeChange = () => {
+        if (selectedFiles.size === 0) {
+            return;
+        }
+        selectedFiles.clear();
+        updateSelectedFileSummary();
+    };
+
+    const formatModified = (value) => {
+        if (!value) {
+            return "Unavailable";
+        }
+        const parsed = new Date(value);
+        return Number.isNaN(parsed.valueOf()) ? "Unavailable" : parsed.toLocaleString();
+    };
+
+    const createFileRow = (file, index) => {
+        const row = document.createElement("tr");
+        row.dataset.fileId = file.file_id;
+        const selectCell = document.createElement("td");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.dataset.fileSelect = "";
+        checkbox.disabled = !file.selectable;
+        checkbox.checked = selectedFiles.has(file.file_id);
+        checkbox.setAttribute("aria-label", `Select ${file.path}`);
+        checkbox.addEventListener("click", (event) => {
+            if (
+                event.shiftKey
+                && lastSelectedVisibleIndex !== null
+                && lastSelectedVisibleIndex !== index
+            ) {
+                const first = Math.min(lastSelectedVisibleIndex, index);
+                const last = Math.max(lastSelectedVisibleIndex, index);
+                currentPageFiles.slice(first, last + 1).forEach(
+                    (rangeFile) => setFileSelected(rangeFile, checkbox.checked)
+                );
+                renderFileRows(currentPageFiles);
+            } else {
+                setFileSelected(file, checkbox.checked);
+            }
+            lastSelectedVisibleIndex = index;
+            updateSelectedFileSummary();
+        });
+        selectCell.append(checkbox);
+
+        const fileCell = document.createElement("td");
+        const name = document.createElement("strong");
+        name.textContent = file.name;
+        const path = document.createElement("span");
+        path.className = "secondary-text file-path";
+        path.textContent = file.path;
+        fileCell.append(name, path);
+
+        const sizeCell = document.createElement("td");
+        sizeCell.textContent = file.size;
+        const modifiedCell = document.createElement("td");
+        modifiedCell.textContent = formatModified(file.modified_at_utc);
+        const extensionCell = document.createElement("td");
+        extensionCell.textContent = file.extension;
+
+        const stateCell = document.createElement("td");
+        const badge = document.createElement("span");
+        const badgeClass = file.selectable
+            ? "healthy"
+            : file.selection_state === "review_only"
+                ? "warning"
+                : "unavailable";
+        badge.className = `status-badge status-${badgeClass}`;
+        badge.textContent = file.selection_label;
+        const reason = document.createElement("span");
+        reason.className = "secondary-text";
+        reason.textContent = file.protection_reason;
+        stateCell.append(badge, reason);
+        row.append(selectCell, fileCell, sizeCell, modifiedCell, extensionCell, stateCell);
+        return row;
+    };
+
+    function renderFileRows(files) {
+        reviewBody.replaceChildren();
+        files.forEach((file, index) => reviewBody.append(createFileRow(file, index)));
+        selectVisibleButton.disabled = !files.some((file) => file.selectable);
+    }
+
+    const resetReviewDisplay = (message) => {
+        currentPageFiles = [];
+        lastSelectedVisibleIndex = null;
+        reviewBody.replaceChildren();
+        reviewResults.hidden = true;
+        matchingCount.textContent = "0 matching files";
+        matchingSize.textContent = "0 B in retained index details";
+        selectVisibleButton.disabled = true;
+        previousPageButton.disabled = true;
+        nextPageButton.disabled = true;
+        boundedDetailWarning.hidden = true;
+        reviewMessage.hidden = false;
+        reviewMessage.textContent = message;
+        reviewMessage.classList.remove("is-error");
+    };
+
+    const buildReviewQuery = () => {
+        const extensions = Array.from(activeExtensions());
+        if (extensions.length === 0) {
+            return {ready: false, message: "Choose at least one file-type group to review matching files."};
+        }
+        if (selectedScopes.size === 0) {
+            return {ready: false, message: "Choose at least one folder review scope to review matching files."};
+        }
+        const formData = new FormData(reviewForm);
+        const minimumSize = Number(formData.get("minimum_size_mib"));
+        const minimumAge = formData.get("minimum_age_days");
+        const parameters = new URLSearchParams();
+        selectedScopes.forEach((scope) => parameters.append("folder_id", scope.folderId));
+        extensions.forEach((extension) => parameters.append("extension", extension));
+        parameters.set("scope_mode", String(formData.get("scope_mode") || "recursive"));
+        parameters.set("filename", String(formData.get("filename") || ""));
+        parameters.set("sort", String(formData.get("sort") || "largest"));
+        parameters.set("page", String(currentReviewPage));
+        parameters.set("page_size", "25");
+        if (minimumSize > 0) {
+            parameters.set("minimum_size_bytes", String(Math.ceil(minimumSize * 1024 * 1024)));
+        }
+        if (minimumAge !== "") {
+            parameters.set("minimum_age_days", String(minimumAge));
+        }
+        return {ready: true, parameters};
+    };
+
+    const loadMatchingFiles = async () => {
+        const query = buildReviewQuery();
+        if (!query.ready) {
+            resetReviewDisplay(query.message);
+            return;
+        }
+        const requestNumber = ++reviewRequestNumber;
+        reviewMessage.hidden = false;
+        reviewMessage.classList.remove("is-error");
+        reviewMessage.textContent = "Loading retained matching-file details…";
+        try {
+            const url = new URL(filesUrl, window.location.origin);
+            url.search = query.parameters.toString();
+            const response = await fetch(url, {
+                method: "GET",
+                credentials: "same-origin",
+                headers: {Accept: "application/json"},
+            });
+            const payload = await response.json();
+            if (requestNumber !== reviewRequestNumber) {
+                return;
+            }
+            if (!response.ok || !payload.ok) {
+                throw new Error(payload.message || "Matching files could not be loaded.");
+            }
+            currentReviewPage = payload.page;
+            currentPageFiles = payload.files;
+            lastSelectedVisibleIndex = null;
+            renderFileRows(currentPageFiles);
+            matchingCount.textContent = `${payload.matching_count.toLocaleString()} matching files`;
+            matchingSize.textContent = `${payload.matching_size} in retained index details`;
+            pageSummary.textContent = `Page ${payload.page} of ${payload.total_pages} · rows ${payload.first_row}–${payload.last_row}`;
+            previousPageButton.disabled = payload.page <= 1;
+            nextPageButton.disabled = payload.page >= payload.total_pages;
+            reviewResults.hidden = false;
+            reviewMessage.hidden = payload.matching_count > 0;
+            reviewMessage.textContent = payload.matching_count > 0
+                ? ""
+                : "No retained files match the selected scopes and filters.";
+            boundedDetailWarning.hidden = payload.detail_coverage !== "bounded";
+            if (payload.detail_coverage === "bounded") {
+                boundedDetailWarning.textContent = `${payload.omitted_files.toLocaleString()} indexed file rows (${payload.omitted_size}) were omitted by the index detail limit. Folder aggregates remain truthful, but omitted paths cannot be selected until a less-bounded index is generated.`;
+            }
+        } catch (error) {
+            if (requestNumber !== reviewRequestNumber) {
+                return;
+            }
+            resetReviewDisplay(
+                error instanceof Error ? error.message : "Matching files could not be loaded."
+            );
+            reviewMessage.classList.add("is-error");
+        }
+    };
+
+    requestReviewRefresh = (resetPage = false) => {
+        if (resetPage) {
+            currentReviewPage = 1;
+        }
+        if (reviewTimer !== null) {
+            window.clearTimeout(reviewTimer);
+        }
+        reviewTimer = window.setTimeout(loadMatchingFiles, 180);
+    };
+
+    reviewForm.addEventListener("input", () => requestReviewRefresh(true));
+    reviewForm.addEventListener("change", (event) => {
+        if (event.target.name === "scope_mode") {
+            clearSelectedFilesForScopeChange();
+        }
+        requestReviewRefresh(true);
+    });
+    reviewForm.addEventListener("reset", () => {
+        window.setTimeout(() => requestReviewRefresh(true), 0);
+    });
+    previousPageButton.addEventListener("click", () => {
+        currentReviewPage = Math.max(1, currentReviewPage - 1);
+        requestReviewRefresh(false);
+    });
+    nextPageButton.addEventListener("click", () => {
+        currentReviewPage += 1;
+        requestReviewRefresh(false);
+    });
+    selectVisibleButton.addEventListener("click", () => {
+        currentPageFiles.forEach((file) => setFileSelected(file, true));
+        renderFileRows(currentPageFiles);
+        updateSelectedFileSummary();
+    });
+    clearFileSelectionButton.addEventListener("click", () => {
+        selectedFiles.clear();
+        renderFileRows(currentPageFiles);
+        updateSelectedFileSummary();
+    });
+
     extensionGroups().forEach((group) => {
         const groupToggle = group.querySelector("[data-group-toggle]");
         const extensionToggles = Array.from(
@@ -514,6 +822,7 @@
 
     const rootNode = explorer.querySelector("[data-tree-node]");
     bindTreeNode(rootNode);
+    updateSelectedFileSummary();
     updateFilterPresentation();
     setBreadcrumb(rootNode.dataset.folderPath);
     setExpanded(rootNode, true);

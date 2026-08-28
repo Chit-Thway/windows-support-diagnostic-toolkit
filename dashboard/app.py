@@ -25,6 +25,7 @@ from .file_type_presenter import (
     present_file_type_children,
     present_file_type_index,
 )
+from .file_type_review import FileTypeReviewQueryError, query_file_type_files
 from .report_loader import ReportLoadError, load_report, resolve_report_path
 from .storage_cleanup import register_storage_cleanup_routes
 from .storage_actions import (
@@ -293,6 +294,34 @@ def create_app(
             parent_id=parent_id,
             children=present_file_type_children(snapshot, parent_id),
         )
+
+    @app.get("/storage/<drive>/file-types/files")
+    def file_type_matching_files(drive: str):
+        configured_paths = app.config["FILE_TYPE_INDEX_PATHS"]
+        if not configured_paths:
+            return jsonify(
+                ok=False,
+                message="No File-Type Explorer index is selected.",
+            ), 404
+        try:
+            snapshot = load_file_type_index_for_drive(configured_paths, drive)
+            result = query_file_type_files(
+                snapshot,
+                folder_ids=request.args.getlist("folder_id"),
+                extensions=request.args.getlist("extension"),
+                scope_mode=request.args.get("scope_mode", "recursive"),
+                filename=request.args.get("filename", ""),
+                minimum_size_bytes=request.args.get("minimum_size_bytes"),
+                minimum_age_days=request.args.get("minimum_age_days"),
+                sort_by=request.args.get("sort", "largest"),
+                page=request.args.get("page", "1"),
+                page_size=request.args.get("page_size", "25"),
+            )
+        except FileTypeIndexLoadError as error:
+            return jsonify(ok=False, message=error.detail), error.status_code
+        except FileTypeReviewQueryError as error:
+            return jsonify(ok=False, message=str(error)), 400
+        return jsonify(ok=True, **result)
 
     @app.post("/storage/<drive>/open-folder")
     def open_storage_folder(drive: str):

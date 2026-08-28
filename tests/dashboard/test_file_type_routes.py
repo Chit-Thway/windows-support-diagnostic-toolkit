@@ -50,7 +50,9 @@ def test_file_type_explorer_renders_groups_and_root_only() -> None:
     assert 'data-folder-id="folder-root"' in body
     assert "support-guide.pdf" not in body
     assert "Changing a filter never starts another drive scan" in body
-    assert "Matching-file results" in body
+    assert "Review matching files" in body
+    assert "Select all visible" in body
+    assert "Recycle Bin preview" in body
 
 
 def test_folder_children_endpoint_returns_one_ranked_level() -> None:
@@ -77,6 +79,59 @@ def test_folder_children_endpoint_rejects_unknown_parent() -> None:
 
     assert response.status_code == 404
     assert response.get_json()["ok"] is False
+
+
+def test_matching_files_endpoint_filters_scopes_and_extensions() -> None:
+    response = build_app().test_client().get(
+        "/storage/C:/file-types/files",
+        query_string=[
+            ("folder_id", "folder-users"),
+            ("extension", ".pdf"),
+            ("sort", "largest"),
+        ],
+    )
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert payload["ok"] is True
+    assert payload["matching_count"] == 2
+    assert [file["name"] for file in payload["files"]] == [
+        "support-guide.pdf",
+        "handbook.pdf",
+    ]
+
+
+def test_matching_files_endpoint_rejects_overlapping_scopes() -> None:
+    response = build_app().test_client().get(
+        "/storage/C:/file-types/files",
+        query_string=[
+            ("folder_id", "folder-users"),
+            ("folder_id", "folder-documents"),
+            ("extension", ".pdf"),
+        ],
+    )
+
+    assert response.status_code == 400
+    assert b"Parent and child folder scopes" in response.data
+
+
+def test_matching_files_endpoint_is_paginated_and_read_only() -> None:
+    client = build_app().test_client()
+    response = client.get(
+        "/storage/C:/file-types/files",
+        query_string=[
+            ("folder_id", "folder-root"),
+            ("extension", ".pdf"),
+            ("page_size", "2"),
+        ],
+    )
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert payload["matching_count"] == 4
+    assert payload["total_pages"] == 2
+    assert len(payload["files"]) == 2
+    assert client.post("/storage/C:/file-types/files").status_code == 405
 
 
 def test_missing_index_shows_explicit_local_commands() -> None:

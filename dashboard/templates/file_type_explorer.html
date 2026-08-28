@@ -30,7 +30,8 @@
           class="shell file-type-page"
           data-file-type-explorer
           data-drive="{{ explorer.drive.drive_letter }}"
-          data-children-url="{{ url_for('file_type_folder_children', drive=explorer.drive.drive_letter) }}">
+          data-children-url="{{ url_for('file_type_folder_children', drive=explorer.drive.drive_letter) }}"
+          data-files-url="{{ url_for('file_type_matching_files', drive=explorer.drive.drive_letter) }}">
         <nav class="back-nav" aria-label="Storage navigation">
             <a href="{{ url_for('storage_drive', drive=explorer.drive.drive_letter) }}">← Back to {{ explorer.drive.drive_letter }} storage insights</a>
         </nav>
@@ -178,9 +179,100 @@
             </div>
         </section>
 
+        <section aria-labelledby="file-review-heading" data-file-review>
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Step 3</p>
+                    <h2 id="file-review-heading">Review matching files</h2>
+                </div>
+                <span class="status-badge status-unavailable">Read-only selection</span>
+            </div>
+
+            <form class="panel file-review-controls" data-file-review-form>
+                <fieldset>
+                    <legend>Folder depth</legend>
+                    <label><input type="radio" name="scope_mode" value="recursive" checked> Include subfolders</label>
+                    <label><input type="radio" name="scope_mode" value="direct"> This folder only</label>
+                </fieldset>
+                <label>
+                    Filename contains
+                    <input type="search" name="filename" placeholder="invoice or holiday">
+                </label>
+                <label>
+                    Minimum size (MiB)
+                    <input type="number" name="minimum_size_mib" min="0" step="0.01" inputmode="decimal">
+                </label>
+                <label>
+                    Minimum age (days)
+                    <input type="number" name="minimum_age_days" min="0" step="1" inputmode="numeric">
+                </label>
+                <label>
+                    Sort by
+                    <select name="sort">
+                        <option value="largest">Largest first</option>
+                        <option value="smallest">Smallest first</option>
+                        <option value="oldest">Oldest modified first</option>
+                        <option value="newest">Newest modified first</option>
+                        <option value="name">Filename A–Z</option>
+                        <option value="path">Path A–Z</option>
+                    </select>
+                </label>
+                <button type="reset" class="secondary-button">Reset file filters</button>
+            </form>
+
+            <div class="panel file-review-summary">
+                <div>
+                    <strong data-matching-count>0 matching files</strong>
+                    <span data-matching-size>0 B in retained index details</span>
+                </div>
+                <div>
+                    <strong data-selected-file-count>0 selected</strong>
+                    <span data-selected-file-size>0 B logical selected</span>
+                </div>
+                <div class="file-review-actions">
+                    <button type="button" class="secondary-button" data-select-visible disabled>Select all visible</button>
+                    <button type="button" class="secondary-button" data-clear-file-selection disabled>Clear selection</button>
+                </div>
+            </div>
+
+            <p class="panel file-review-message" data-file-review-message role="status" aria-live="polite">Choose at least one file-type group and one folder scope to review matching files.</p>
+            <p class="panel bounded-detail-warning" data-bounded-detail-warning hidden></p>
+
+            <div class="panel file-review-table-wrap" data-file-review-results hidden>
+                <table class="file-review-table">
+                    <thead>
+                        <tr>
+                            <th scope="col"><span class="visually-hidden">Select</span></th>
+                            <th scope="col">File</th>
+                            <th scope="col">Size</th>
+                            <th scope="col">Modified</th>
+                            <th scope="col">Extension</th>
+                            <th scope="col">Selection</th>
+                        </tr>
+                    </thead>
+                    <tbody data-file-review-body></tbody>
+                </table>
+                <div class="file-review-pagination">
+                    <span data-page-summary>Page 1 of 1</span>
+                    <div>
+                        <button type="button" class="secondary-button" data-previous-page disabled>Previous</button>
+                        <button type="button" class="secondary-button" data-next-page disabled>Next</button>
+                    </div>
+                </div>
+            </div>
+
+            <details class="panel selected-file-panel">
+                <summary>Selected paths for later cleanup preview</summary>
+                <p class="support-note">Selections remain local to this browser page. No file is moved or changed in this milestone.</p>
+                <ul data-selected-file-list>
+                    <li data-no-selected-files>No files selected yet.</li>
+                </ul>
+            </details>
+        </section>
+
         <section class="panel milestone-note" aria-label="Milestone boundary">
-            <strong>Read-only folder scope selection is ready.</strong>
-            Matching-file results, sorting, file checkboxes, and Recycle Bin integration belong to later milestones and are not active on this page.
+            <strong>Read-only matching-file review and selection are ready.</strong>
+            Recycle Bin preview, revalidation, confirmation, and file movement belong to Milestone 5 and are not active on this page.
         </section>
     </main>
 </body>

@@ -164,9 +164,7 @@ Completed branch: `storage-extension-v2-m2-indexer`
 
 ### Milestone 11 / V2 Milestone 3 — Cleanup method and ranked folder tree
 
-Status: Implemented and validated locally on
-`storage-extension-v2-m3-ranked-folder-tree`; not yet committed, pushed, or
-merged.
+Status: Complete and merged into `storage-extension-v2`.
 
 Add a **Cleanup methods** section to each disk page and a dedicated
 **Method 1 — File-Type Explorer** page. Provide grouped extension checkboxes
@@ -184,7 +182,8 @@ Planned branch: `storage-extension-v2-m3-ranked-folder-tree`
 
 ### Milestone 12 / V2 Milestone 4 — Matching-file review and selection
 
-Status: Planned; implementation has not started.
+Status: Implemented and validated locally on
+`storage-extension-v2-m4-file-review`; not yet committed, pushed, or merged.
 
 Show the matching files for the selected folder scopes with direct-folder and
 include-subfolders modes. Add largest/smallest, oldest/newest, natural filename,

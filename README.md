@@ -310,8 +310,11 @@ storage page. Method 1 opens a read-only File-Type Explorer where grouped and
 individual extension filters recalculate the existing folder aggregates,
 without another drive scan. The ranked tree loads one child level at a time,
 supports accessible expansion and breadcrumbs, and accepts multiple folder
-review scopes while rejecting overlapping parent/child scopes. It does not yet
-display or select the matching files, and it performs no cleanup.
+review scopes while rejecting overlapping parent/child scopes. Matching retained
+file details can then be filtered by filename, minimum size, minimum age, exact
+extension, and folder depth; sorted deterministically; paged; and selected
+individually, by shift-range, or with visible-page selection. Protected and
+review-only rows remain unselectable. The page performs no cleanup.
 
 Real scans are written only to ignored `storage-reports/`.
 
